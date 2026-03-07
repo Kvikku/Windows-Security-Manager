@@ -47,7 +47,7 @@ public class SecuritySettingsManager
     }
 
     /// <summary>
-    /// Disables (unharden) a single setting by its ID.
+    /// Disables (unhardens) a single setting by its ID.
     /// </summary>
     public bool DisableSetting(string settingId)
     {
