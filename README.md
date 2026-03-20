@@ -18,8 +18,23 @@ A Windows C# CLI application that enables and disables Windows security hardenin
 ## Requirements
 
 - Windows 10/11 or Windows Server 2016+
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
 - **Administrator privileges** (required for registry modifications)
+
+### For development
+
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
+
+## Quick Start (Pre-built Executable)
+
+Download the latest `WindowsSecurityManager.exe` from the [Releases](../../releases) page. The executable is self-contained and does not require the .NET SDK or runtime to be installed on the target machine.
+
+```bash
+# Run directly — no install needed
+WindowsSecurityManager.exe --help
+WindowsSecurityManager.exe list
+WindowsSecurityManager.exe enable --setting DEF-001
+WindowsSecurityManager.exe report
+```
 
 ## Build
 
@@ -27,7 +42,17 @@ A Windows C# CLI application that enables and disables Windows security hardenin
 dotnet build
 ```
 
-## Run
+## Publish as Standalone Executable
+
+To package the project as a self-contained single-file executable without Visual Studio:
+
+```bash
+dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj --configuration Release --runtime win-x64 --self-contained true --output ./publish
+```
+
+This produces `./publish/WindowsSecurityManager.exe` — a single file you can copy to any Windows x64 machine and run without installing the .NET runtime.
+
+## Run (Development)
 
 ```bash
 # Show help
@@ -63,6 +88,13 @@ dotnet run --project src/WindowsSecurityManager -- report --category Firewall
 ```bash
 dotnet test
 ```
+
+## CI/CD — Automated Releases
+
+A GitHub Actions workflow (`.github/workflows/release.yml`) automatically builds and publishes the executable:
+
+- **On tag push** (`v*`): builds the executable, runs tests, and creates a GitHub Release with the `.exe` attached.
+- **Manual trigger**: use the "Run workflow" button on the Actions tab to build on demand. The artifact is available for download from the workflow run.
 
 ## Available Categories
 
@@ -118,6 +150,8 @@ ISecuritySettingProvider[] providers =
 ## Project Structure
 
 ```
+├── .github/workflows/
+│   └── release.yml        # CI/CD: build & release executable
 ├── src/WindowsSecurityManager/
 │   ├── Commands/          # CLI command handlers (enable, disable, report, list)
 │   ├── Definitions/       # Security setting definitions by category
@@ -128,7 +162,7 @@ ISecuritySettingProvider[] providers =
 │   ├── SecuritySettingsManagerTests.cs
 │   ├── SettingDefinitionTests.cs
 │   └── SecurityReportTests.cs
-└── WindowsSecurityManager.sln
+└── WindowsSecurityManager.slnx
 ```
 
 ## License
