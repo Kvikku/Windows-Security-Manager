@@ -5,7 +5,7 @@ using WindowsSecurityManager.Services;
 namespace WindowsSecurityManager.Commands;
 
 /// <summary>
-/// CLI command to list available security settings.
+/// CLI command to list available security settings, with optional search filtering.
 /// </summary>
 public static class ListCommand
 {
@@ -14,17 +14,33 @@ public static class ListCommand
         var command = new Command("list", "List available security settings");
 
         var categoryOption = new Option<SecurityCategory?>("--category", "List settings in a specific category only");
+        var searchOption = new Option<string?>("--search", "Search settings by keyword across names, IDs, and descriptions");
 
         command.AddOption(categoryOption);
+        command.AddOption(searchOption);
 
-        command.SetHandler((category) =>
+        command.SetHandler((category, search) =>
         {
-            var settings = manager.GetSettings(category);
+            IReadOnlyList<SecuritySetting> settings;
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                settings = manager.SearchSettings(search);
+                if (category.HasValue)
+                    settings = settings.Where(s => s.Category == category.Value).ToList();
+            }
+            else
+            {
+                settings = manager.GetSettings(category);
+            }
 
             Console.WriteLine("╔══════════════════════════════════════════════════════════════════╗");
             Console.WriteLine("║           Windows Security Manager - Available Settings         ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════════════╝");
             Console.WriteLine();
+
+            if (!string.IsNullOrWhiteSpace(search))
+                Console.WriteLine($"  Search: \"{search}\"");
 
             var grouped = settings
                 .GroupBy(s => s.Category)
@@ -46,7 +62,7 @@ public static class ListCommand
             }
 
             Console.WriteLine($"  Total: {settings.Count} settings");
-        }, categoryOption);
+        }, categoryOption, searchOption);
 
         return command;
     }

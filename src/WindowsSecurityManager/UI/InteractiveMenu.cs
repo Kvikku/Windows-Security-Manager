@@ -1,4 +1,5 @@
 using Spectre.Console;
+using WindowsSecurityManager.Definitions;
 using WindowsSecurityManager.Models;
 using WindowsSecurityManager.Services;
 
@@ -6,20 +7,30 @@ namespace WindowsSecurityManager.UI;
 
 /// <summary>
 /// Interactive terminal menu system using Spectre.Console.
+/// Features: live dashboard, search, profiles, multi-select, export, backup/restore, auto-refresh.
 /// </summary>
 public class InteractiveMenu
 {
     private readonly SecuritySettingsManager _manager;
+    private readonly IRegistryService _registryService;
+    private readonly AuditLogger? _auditLogger;
 
-    private const string MenuList = "List Settings";
-    private const string MenuReport = "Compliance Report";
-    private const string MenuEnable = "Enable Settings";
-    private const string MenuDisable = "Disable Settings";
-    private const string MenuExit = "Exit";
+    private const string MenuList = "📋 List Settings";
+    private const string MenuReport = "📊 Compliance Report";
+    private const string MenuEnable = "🟢 Enable Settings";
+    private const string MenuDisable = "🔴 Disable Settings";
+    private const string MenuSearch = "🔍 Search Settings";
+    private const string MenuDetail = "🔎 Setting Detail";
+    private const string MenuProfiles = "⚡ Security Profiles";
+    private const string MenuExport = "💾 Export Report";
+    private const string MenuBackup = "📦 Backup / Restore";
+    private const string MenuExit = "🚪 Exit";
 
-    public InteractiveMenu(SecuritySettingsManager manager)
+    public InteractiveMenu(SecuritySettingsManager manager, IRegistryService registryService, AuditLogger? auditLogger = null)
     {
         _manager = manager;
+        _registryService = registryService;
+        _auditLogger = auditLogger;
     }
 
     public void Run()
@@ -50,6 +61,21 @@ public class InteractiveMenu
                 case MenuDisable:
                     ShowDisableView();
                     break;
+                case MenuSearch:
+                    ShowSearchView();
+                    break;
+                case MenuDetail:
+                    ShowDetailView();
+                    break;
+                case MenuProfiles:
+                    ShowProfilesView();
+                    break;
+                case MenuExport:
+                    ShowExportView();
+                    break;
+                case MenuBackup:
+                    ShowBackupRestoreView();
+                    break;
             }
 
             WaitForKey();
@@ -65,7 +91,7 @@ public class InteractiveMenu
             .Color(Color.Cyan1);
 
         var subtitle = new Markup("[bold cyan]Windows Security Manager[/]").Centered();
-        var version = new Markup("[dim]v1.0.0 — Security Hardening Made Simple[/]").Centered();
+        var version = new Markup("[dim]v2.0.0 — Security Hardening Made Simple[/]").Centered();
 
         var panel = new Panel(
             new Rows(
@@ -127,14 +153,70 @@ public class InteractiveMenu
         AnsiConsole.Write(title);
         AnsiConsole.WriteLine();
 
+        // Live dashboard — per-category compliance bars
+        ShowDashboard();
+        AnsiConsole.WriteLine();
+
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[bold]What would you like to do?[/]")
-                .PageSize(8)
+                .PageSize(12)
                 .HighlightStyle(new Style(Color.Cyan1, decoration: Decoration.Bold))
-                .AddChoices(MenuList, MenuReport, MenuEnable, MenuDisable, MenuExit));
+                .AddChoices(
+                    MenuList, MenuReport, MenuEnable, MenuDisable,
+                    MenuSearch, MenuDetail, MenuProfiles,
+                    MenuExport, MenuBackup, MenuExit));
 
         return choice;
+    }
+
+    /// <summary>
+    /// Live dashboard showing per-category compliance bars.
+    /// </summary>
+    private void ShowDashboard()
+    {
+        var report = _manager.GenerateReport();
+        var grouped = report.Settings
+            .GroupBy(s => s.Setting.Category)
+            .OrderBy(g => g.Key.ToString());
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Title("[bold dim]Security Posture[/]")
+            .AddColumn(new TableColumn("[bold]Category[/]").Width(25))
+            .AddColumn(new TableColumn("[bold]Compliance[/]").Width(40))
+            .AddColumn(new TableColumn("[bold]Score[/]").Centered().Width(12));
+
+        foreach (var group in grouped)
+        {
+            int enabled = group.Count(s => s.IsEnabled);
+            int total = group.Count();
+            double pct = total > 0 ? (double)enabled / total * 100 : 0;
+
+            var barColor = pct >= 80 ? "green" : pct >= 50 ? "yellow" : "red";
+            int filled = (int)(pct / 100 * 20);
+            string bar = new string('█', filled) + new string('░', 20 - filled);
+
+            table.AddRow(
+                $"[cyan]{group.Key}[/]",
+                $"[{barColor}]{bar}[/]",
+                $"[{barColor}]{enabled}/{total}[/]"
+            );
+        }
+
+        // Overall row
+        var overallColor = report.CompliancePercentage >= 80 ? "green" : report.CompliancePercentage >= 50 ? "yellow" : "red";
+        int overallFilled = (int)(report.CompliancePercentage / 100 * 20);
+        string overallBar = new string('█', overallFilled) + new string('░', 20 - overallFilled);
+        table.AddEmptyRow();
+        table.AddRow(
+            $"[bold]Overall[/]",
+            $"[bold {overallColor}]{overallBar}[/]",
+            $"[bold {overallColor}]{report.CompliancePercentage:F0}%[/]"
+        );
+
+        AnsiConsole.Write(table);
     }
 
     private void ShowListView()
@@ -215,10 +297,6 @@ public class InteractiveMenu
             .AddItem("Misconfigured", report.DisabledCount - report.NotConfiguredCount, Color.Yellow)
             .AddItem("Missing", report.NotConfiguredCount, Color.Red);
 
-        var summaryGrid = new Grid()
-            .AddColumn()
-            .AddColumn();
-
         var statsTable = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
@@ -298,7 +376,7 @@ public class InteractiveMenu
             new SelectionPrompt<string>()
                 .Title("[bold]What would you like to enable?[/]")
                 .HighlightStyle(new Style(Color.Green))
-                .AddChoices("A specific setting", "An entire category", "All settings", "← Back"));
+                .AddChoices("A specific setting", "An entire category", "Multiple settings (multi-select)", "All settings", "← Back"));
 
         if (scope == "← Back") return;
 
@@ -317,6 +395,7 @@ public class InteractiveMenu
                 });
 
             AnsiConsole.MarkupLine($"[green]✓ Enabled {count} security settings.[/]");
+            ShowAutoRefresh();
         }
         else if (scope == "An entire category")
         {
@@ -334,6 +413,11 @@ public class InteractiveMenu
                 });
 
             AnsiConsole.MarkupLine($"[green]✓ Enabled {count} settings in '{category}'.[/]");
+            ShowAutoRefresh(category);
+        }
+        else if (scope == "Multiple settings (multi-select)")
+        {
+            ShowMultiSelectEnable();
         }
         else
         {
@@ -348,6 +432,8 @@ public class InteractiveMenu
                 AnsiConsole.MarkupLine($"[green]✓ '{setting.Name}' enabled successfully.[/]");
             else
                 AnsiConsole.MarkupLine($"[red]✗ Failed to enable '{setting.Name}'.[/]");
+
+            ShowAutoRefreshSingle(setting);
         }
     }
 
@@ -364,7 +450,7 @@ public class InteractiveMenu
             new SelectionPrompt<string>()
                 .Title("[bold]What would you like to disable?[/]")
                 .HighlightStyle(new Style(Color.Red))
-                .AddChoices("A specific setting", "An entire category", "All settings", "← Back"));
+                .AddChoices("A specific setting", "An entire category", "Multiple settings (multi-select)", "All settings", "← Back"));
 
         if (scope == "← Back") return;
 
@@ -383,6 +469,7 @@ public class InteractiveMenu
                 });
 
             AnsiConsole.MarkupLine($"[red]✗ Disabled {count} security settings.[/]");
+            ShowAutoRefresh();
         }
         else if (scope == "An entire category")
         {
@@ -400,6 +487,11 @@ public class InteractiveMenu
                 });
 
             AnsiConsole.MarkupLine($"[red]✗ Disabled {count} settings in '{category}'.[/]");
+            ShowAutoRefresh(category);
+        }
+        else if (scope == "Multiple settings (multi-select)")
+        {
+            ShowMultiSelectDisable();
         }
         else
         {
@@ -414,7 +506,398 @@ public class InteractiveMenu
                 AnsiConsole.MarkupLine($"[red]✗ '{setting.Name}' disabled.[/]");
             else
                 AnsiConsole.MarkupLine($"[red]Failed to disable '{setting.Name}'.[/]");
+
+            ShowAutoRefreshSingle(setting);
         }
+    }
+
+    /// <summary>
+    /// Multi-select enable: pick multiple settings using checkboxes.
+    /// </summary>
+    private void ShowMultiSelectEnable()
+    {
+        var category = PromptCategory();
+        var settings = _manager.GetSettings(category);
+
+        var selected = AnsiConsole.Prompt(
+            new MultiSelectionPrompt<string>()
+                .Title($"[bold green]Select settings to enable in {category}:[/]")
+                .PageSize(20)
+                .HighlightStyle(new Style(Color.Green))
+                .InstructionsText("[grey](Press [green]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
+                .AddChoices(settings.Select(s => $"[{s.Id}] {s.Name}")));
+
+        if (selected.Count == 0) return;
+
+        var ids = selected.Select(s => s.Split(']')[0].TrimStart('[')).ToList();
+
+        if (!ConfirmAction($"[yellow]Enable {ids.Count} selected settings?[/]"))
+            return;
+
+        int count = _manager.EnableSettings(ids);
+        AnsiConsole.MarkupLine($"[green]✓ Enabled {count} settings.[/]");
+        ShowAutoRefresh(category);
+    }
+
+    /// <summary>
+    /// Multi-select disable: pick multiple settings using checkboxes.
+    /// </summary>
+    private void ShowMultiSelectDisable()
+    {
+        var category = PromptCategory();
+        var settings = _manager.GetSettings(category);
+
+        var selected = AnsiConsole.Prompt(
+            new MultiSelectionPrompt<string>()
+                .Title($"[bold red]Select settings to disable in {category}:[/]")
+                .PageSize(20)
+                .HighlightStyle(new Style(Color.Red))
+                .InstructionsText("[grey](Press [red]<space>[/] to toggle, [red]<enter>[/] to accept)[/]")
+                .AddChoices(settings.Select(s => $"[{s.Id}] {s.Name}")));
+
+        if (selected.Count == 0) return;
+
+        var ids = selected.Select(s => s.Split(']')[0].TrimStart('[')).ToList();
+
+        if (!ConfirmAction($"[red]Disable {ids.Count} selected settings?[/]"))
+            return;
+
+        int count = _manager.DisableSettings(ids);
+        AnsiConsole.MarkupLine($"[red]✗ Disabled {count} settings.[/]");
+        ShowAutoRefresh(category);
+    }
+
+    /// <summary>
+    /// Search settings by keyword.
+    /// </summary>
+    private void ShowSearchView()
+    {
+        AnsiConsole.Write(new Rule("[bold cyan]Search Settings[/]")
+        {
+            Justification = Justify.Center,
+            Style = Style.Parse("cyan")
+        });
+        AnsiConsole.WriteLine();
+
+        var keyword = AnsiConsole.Ask<string>("[bold]Enter search keyword:[/]");
+        var results = _manager.SearchSettings(keyword);
+
+        if (results.Count == 0)
+        {
+            AnsiConsole.MarkupLine($"[yellow]No settings found matching '{Markup.Escape(keyword)}'.[/]");
+            return;
+        }
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Title($"[bold cyan]Search Results for '{Markup.Escape(keyword)}'[/] [dim]({results.Count} matches)[/]")
+            .AddColumn(new TableColumn("[bold]ID[/]").Width(10))
+            .AddColumn(new TableColumn("[bold]Name[/]").Width(40))
+            .AddColumn(new TableColumn("[bold]Category[/]").Width(22))
+            .AddColumn(new TableColumn("[bold]Type[/]").Centered().Width(8));
+
+        foreach (var s in results)
+        {
+            table.AddRow(
+                $"[cyan]{s.Id}[/]",
+                Markup.Escape(s.Name),
+                $"[dim]{s.Category}[/]",
+                $"[dim]{s.ValueType}[/]"
+            );
+        }
+
+        AnsiConsole.Write(table);
+    }
+
+    /// <summary>
+    /// Detailed view of a single setting.
+    /// </summary>
+    private void ShowDetailView()
+    {
+        AnsiConsole.Write(new Rule("[bold cyan]Setting Detail[/]")
+        {
+            Justification = Justify.Center,
+            Style = Style.Parse("cyan")
+        });
+        AnsiConsole.WriteLine();
+
+        var setting = PromptSetting();
+        if (setting == null) return;
+
+        var status = _manager.GetSettingStatus(setting);
+
+        var panel = new Panel(new Rows(
+            new Markup($"[bold cyan]ID:[/]            {Markup.Escape(setting.Id)}"),
+            new Markup($"[bold cyan]Name:[/]          {Markup.Escape(setting.Name)}"),
+            new Markup($"[bold cyan]Description:[/]   {Markup.Escape(setting.Description)}"),
+            new Markup($"[bold cyan]Category:[/]      {setting.Category}"),
+            new Text(""),
+            new Markup("[bold yellow]Registry:[/]"),
+            new Markup($"  [dim]Hive:[/]         {Markup.Escape(setting.RegistryHive)}"),
+            new Markup($"  [dim]Path:[/]         {Markup.Escape(setting.RegistryPath)}"),
+            new Markup($"  [dim]Value Name:[/]   {Markup.Escape(setting.ValueName)}"),
+            new Markup($"  [dim]Value Type:[/]   {setting.ValueType}"),
+            new Text(""),
+            new Markup("[bold yellow]Values:[/]"),
+            new Markup($"  [green]Enabled:[/]      {setting.EnabledValue}"),
+            new Markup($"  [red]Disabled:[/]     {setting.DisabledValue}"),
+            new Markup($"  [blue]Recommended:[/]  {setting.RecommendedValue}"),
+            new Text(""),
+            new Markup("[bold yellow]Current Status:[/]"),
+            new Markup($"  [dim]State:[/]         {(status.IsEnabled ? "[green]✓ ENABLED[/]" : status.IsConfigured ? "[yellow]✗ DISABLED[/]" : "[red]? MISSING[/]")}"),
+            new Markup($"  [dim]Current Value:[/]  {Markup.Escape(status.CurrentValue?.ToString() ?? "N/A (not configured)")}"),
+            new Markup($"  [dim]Is Configured:[/]  {status.IsConfigured}"),
+            new Markup($"  [dim]Matches Recommended:[/] {status.MatchesRecommended}")
+        ))
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(Color.Cyan1),
+            Header = new PanelHeader($"[bold] {Markup.Escape(setting.Name)} [/]"),
+            Padding = new Padding(2, 1)
+        };
+
+        AnsiConsole.Write(panel);
+    }
+
+    /// <summary>
+    /// Security profiles view — list and apply presets.
+    /// </summary>
+    private void ShowProfilesView()
+    {
+        AnsiConsole.Write(new Rule("[bold cyan]Security Profiles[/]")
+        {
+            Justification = Justify.Center,
+            Style = Style.Parse("cyan")
+        });
+        AnsiConsole.WriteLine();
+
+        var profiles = SecurityProfiles.GetProfiles();
+        var choices = profiles.Select(p => $"{p.Name} ({p.SettingIds.Count} settings)").ToList();
+        choices.Add("← Back");
+
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]Select a profile to view or apply:[/]")
+                .PageSize(10)
+                .HighlightStyle(new Style(Color.Cyan1, decoration: Decoration.Bold))
+                .AddChoices(choices));
+
+        if (choice == "← Back") return;
+
+        var profileName = choice.Split(" (")[0];
+        var profile = profiles.First(p => p.Name == profileName);
+
+        // Show profile details
+        AnsiConsole.MarkupLine($"[bold cyan]{Markup.Escape(profile.Name)}[/]");
+        AnsiConsole.MarkupLine($"[dim]{Markup.Escape(profile.Description)}[/]");
+        AnsiConsole.MarkupLine($"[dim]Settings: {profile.SettingIds.Count}[/]");
+        AnsiConsole.WriteLine();
+
+        var action = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]What would you like to do?[/]")
+                .AddChoices("Apply this profile", "Preview (dry run)", "← Back"));
+
+        if (action == "← Back") return;
+
+        if (action == "Preview (dry run)")
+        {
+            var settings = _manager.GetSettings()
+                .Where(s => profile.SettingIds.Contains(s.Id, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+            var changes = _manager.DryRunEnable(settings);
+
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .BorderColor(Color.Grey)
+                .Title($"[bold yellow]Dry Run — {Markup.Escape(profile.Name)}[/]")
+                .AddColumn(new TableColumn("[bold]ID[/]").Width(10))
+                .AddColumn(new TableColumn("[bold]Name[/]").Width(40))
+                .AddColumn(new TableColumn("[bold]Current[/]").Centered().Width(10))
+                .AddColumn(new TableColumn("[bold]→ New[/]").Centered().Width(10));
+
+            foreach (var change in changes)
+            {
+                string current = change.IsCurrentlyConfigured ? change.CurrentValue?.ToString() ?? "N/A" : "[red]NOT SET[/]";
+                table.AddRow(
+                    $"[cyan]{change.Setting.Id}[/]",
+                    Markup.Escape(change.Setting.Name),
+                    current,
+                    $"[green]{change.NewValue}[/]"
+                );
+            }
+
+            AnsiConsole.Write(table);
+        }
+        else
+        {
+            if (!ConfirmAction($"[yellow]Apply profile '{Markup.Escape(profile.Name)}'? This will enable {profile.SettingIds.Count} settings.[/]"))
+                return;
+
+            int count = _manager.EnableSettings(profile.SettingIds);
+            AnsiConsole.MarkupLine($"[green]✓ Applied '{Markup.Escape(profile.Name)}': enabled {count} settings.[/]");
+            ShowAutoRefresh();
+        }
+    }
+
+    /// <summary>
+    /// Export report to file.
+    /// </summary>
+    private void ShowExportView()
+    {
+        AnsiConsole.Write(new Rule("[bold cyan]Export Report[/]")
+        {
+            Justification = Justify.Center,
+            Style = Style.Parse("cyan")
+        });
+        AnsiConsole.WriteLine();
+
+        var formatChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]Select export format:[/]")
+                .AddChoices("JSON", "CSV", "HTML", "← Back"));
+
+        if (formatChoice == "← Back") return;
+
+        var format = formatChoice switch
+        {
+            "JSON" => ExportFormat.Json,
+            "CSV" => ExportFormat.Csv,
+            "HTML" => ExportFormat.Html,
+            _ => ExportFormat.Json
+        };
+
+        var extension = format switch
+        {
+            ExportFormat.Json => "json",
+            ExportFormat.Csv => "csv",
+            ExportFormat.Html => "html",
+            _ => "json"
+        };
+
+        var defaultPath = $"wsm-report-{DateTime.UtcNow:yyyyMMdd-HHmmss}.{extension}";
+        var filePath = AnsiConsole.Ask("[bold]Export file path:[/]", defaultPath);
+
+        SecurityReport report = null!;
+        AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("cyan"))
+            .Start("[cyan]Generating report...[/]", ctx =>
+            {
+                report = _manager.GenerateReport();
+            });
+
+        var exporter = new ReportExporter();
+        exporter.ExportToFile(report, format, filePath);
+
+        AnsiConsole.MarkupLine($"[green]✓ Report exported to '{Markup.Escape(filePath)}' ({formatChoice} format).[/]");
+    }
+
+    /// <summary>
+    /// Backup/restore menu.
+    /// </summary>
+    private void ShowBackupRestoreView()
+    {
+        AnsiConsole.Write(new Rule("[bold cyan]Backup / Restore[/]")
+        {
+            Justification = Justify.Center,
+            Style = Style.Parse("cyan")
+        });
+        AnsiConsole.WriteLine();
+
+        var action = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold]What would you like to do?[/]")
+                .AddChoices("Create backup", "Restore from backup", "← Back"));
+
+        if (action == "← Back") return;
+
+        if (action == "Create backup")
+        {
+            var defaultPath = $"wsm-backup-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json";
+            var filePath = AnsiConsole.Ask("[bold]Backup file path:[/]", defaultPath);
+
+            var backupService = new BackupService(_manager, _registryService);
+
+            BackupData backup = null!;
+            AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .SpinnerStyle(Style.Parse("cyan"))
+                .Start("[cyan]Creating backup...[/]", ctx =>
+                {
+                    backup = backupService.CreateBackup();
+                    backupService.SaveToFile(backup, filePath);
+                });
+
+            AnsiConsole.MarkupLine($"[green]✓ Backup saved to '{Markup.Escape(filePath)}' ({backup.Entries.Count} settings).[/]");
+            _auditLogger?.Log("Backup", filePath, $"Backed up {backup.Entries.Count} settings");
+        }
+        else
+        {
+            var filePath = AnsiConsole.Ask<string>("[bold]Path to backup file:[/]");
+
+            if (!File.Exists(filePath))
+            {
+                AnsiConsole.MarkupLine($"[red]File not found: {Markup.Escape(filePath)}[/]");
+                return;
+            }
+
+            if (!ConfirmAction("[yellow]Restore from backup? This will overwrite current registry values.[/]"))
+                return;
+
+            var backupService = new BackupService(_manager, _registryService);
+
+            int count = 0;
+            AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .SpinnerStyle(Style.Parse("cyan"))
+                .Start("[cyan]Restoring...[/]", ctx =>
+                {
+                    count = backupService.RestoreFromFile(filePath);
+                });
+
+            AnsiConsole.MarkupLine($"[green]✓ Restored {count} settings from '{Markup.Escape(filePath)}'.[/]");
+            _auditLogger?.Log("Restore", filePath, $"Restored {count} settings");
+            ShowAutoRefresh();
+        }
+    }
+
+    /// <summary>
+    /// Auto-refresh: show updated compliance status after changes.
+    /// </summary>
+    private void ShowAutoRefresh(SecurityCategory? category = null)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule("[dim]Updated Status[/]") { Style = Style.Parse("dim grey") });
+        AnsiConsole.WriteLine();
+
+        var report = _manager.GenerateReport(category);
+        var compColor = report.CompliancePercentage >= 80 ? "green" : report.CompliancePercentage >= 50 ? "yellow" : "red";
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .HideHeaders()
+            .AddColumn("Metric")
+            .AddColumn("Value");
+
+        table.AddRow("[dim]Hardened[/]", $"[green]{report.EnabledCount}[/] / [white]{report.TotalSettings}[/]");
+        table.AddRow("[bold]Compliance[/]", $"[bold {compColor}]{report.CompliancePercentage:F1}%[/]");
+
+        AnsiConsole.Write(table);
+    }
+
+    /// <summary>
+    /// Auto-refresh for a single setting.
+    /// </summary>
+    private void ShowAutoRefreshSingle(SecuritySetting setting)
+    {
+        AnsiConsole.WriteLine();
+        var status = _manager.GetSettingStatus(setting);
+        string stateIcon = status.IsEnabled ? "[green]✓ ENABLED[/]" : status.IsConfigured ? "[yellow]✗ DISABLED[/]" : "[red]? MISSING[/]";
+        string currentVal = status.CurrentValue?.ToString() ?? "N/A";
+        AnsiConsole.MarkupLine($"  [dim]Current state:[/] {stateIcon} [dim](value: {Markup.Escape(currentVal)})[/]");
     }
 
     private SecurityCategory? PromptCategoryOrAll(string action)

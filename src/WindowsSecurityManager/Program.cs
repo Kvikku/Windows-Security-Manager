@@ -18,10 +18,15 @@ ISecuritySettingProvider[] providers =
 
 var manager = new SecuritySettingsManager(registryService, providers);
 
+// Set up audit logger
+var logPath = Path.Combine(AppContext.BaseDirectory, "wsm-audit.log");
+var auditLogger = new AuditLogger(logPath);
+manager.SetAuditLogger(auditLogger);
+
 // If no arguments provided, launch interactive mode
 if (args.Length == 0)
 {
-    var menu = new InteractiveMenu(manager);
+    var menu = new InteractiveMenu(manager, registryService, auditLogger);
     menu.Run();
     return 0;
 }
@@ -33,5 +38,9 @@ rootCommand.AddCommand(EnableCommand.Create(manager));
 rootCommand.AddCommand(DisableCommand.Create(manager));
 rootCommand.AddCommand(ReportCommand.Create(manager));
 rootCommand.AddCommand(ListCommand.Create(manager));
+rootCommand.AddCommand(DetailCommand.Create(manager));
+rootCommand.AddCommand(ProfileCommand.Create(manager));
+rootCommand.AddCommand(BackupCommand.Create(manager, registryService, auditLogger));
+rootCommand.AddCommand(RestoreCommand.Create(manager, registryService, auditLogger));
 
 return await rootCommand.InvokeAsync(args);
