@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using WindowsSecurityManager.Models;
 
@@ -9,6 +10,7 @@ namespace WindowsSecurityManager.Services;
 public class AuditLogger
 {
     private readonly string _logFilePath;
+    private const string TimestampFormat = "yyyy-MM-dd HH:mm:ss";
 
     public AuditLogger(string logFilePath)
     {
@@ -56,7 +58,7 @@ public class AuditLogger
     private static string FormatEntry(AuditLogEntry entry)
     {
         var details = entry.Details != null ? $" | {entry.Details}" : "";
-        return $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss}] {entry.Action}: {entry.Target}{details}";
+        return $"[{entry.Timestamp.ToString(TimestampFormat, CultureInfo.InvariantCulture)}] {entry.Action}: {entry.Target}{details}";
     }
 
     private static AuditLogEntry? ParseEntry(string line)
@@ -91,7 +93,7 @@ public class AuditLogger
 
             return new AuditLogEntry
             {
-                Timestamp = DateTime.Parse(timestampStr),
+                Timestamp = DateTime.ParseExact(timestampStr, TimestampFormat, CultureInfo.InvariantCulture),
                 Action = action,
                 Target = target,
                 Details = details
