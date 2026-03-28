@@ -201,12 +201,16 @@ public class SecuritySettingsManager
     /// </summary>
     public IReadOnlyList<DryRunChange> DryRunEnable(IEnumerable<SecuritySetting> settings)
     {
-        return settings.Select(s => new DryRunChange
+        return settings.Select(s =>
         {
-            Setting = s,
-            CurrentValue = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName),
-            NewValue = s.EnabledValue,
-            IsCurrentlyConfigured = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName) != null
+            var currentValue = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName);
+            return new DryRunChange
+            {
+                Setting = s,
+                CurrentValue = currentValue,
+                NewValue = s.EnabledValue,
+                IsCurrentlyConfigured = currentValue != null
+            };
         }).ToList();
     }
 
@@ -215,12 +219,16 @@ public class SecuritySettingsManager
     /// </summary>
     public IReadOnlyList<DryRunChange> DryRunDisable(IEnumerable<SecuritySetting> settings)
     {
-        return settings.Select(s => new DryRunChange
+        return settings.Select(s =>
         {
-            Setting = s,
-            CurrentValue = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName),
-            NewValue = s.DisabledValue,
-            IsCurrentlyConfigured = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName) != null
+            var currentValue = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName);
+            return new DryRunChange
+            {
+                Setting = s,
+                CurrentValue = currentValue,
+                NewValue = s.DisabledValue,
+                IsCurrentlyConfigured = currentValue != null
+            };
         }).ToList();
     }
 

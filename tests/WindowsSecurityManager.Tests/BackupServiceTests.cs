@@ -149,4 +149,97 @@ public class BackupServiceTests
         Assert.Throws<FileNotFoundException>(() =>
             _backupService.RestoreFromFile("/nonexistent/backup.json"));
     }
+
+    [Fact]
+    public void RestoreFromFile_IgnoresUnknownSettings()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"wsm-test-backup-{Guid.NewGuid()}.json");
+        try
+        {
+            // Create a backup file with an unknown setting ID injected
+            var json = """
+            {
+                "CreatedAt": "2024-01-01T00:00:00Z",
+                "Entries": [
+                    {
+                        "SettingId": "TEST-001",
+                        "RegistryHive": "HKLM",
+                        "RegistryPath": "SOFTWARE\\Test",
+                        "ValueName": "TestValue1",
+                        "ValueType": "DWord",
+                        "Value": "1",
+                        "WasConfigured": true
+                    },
+                    {
+                        "SettingId": "MALICIOUS-001",
+                        "RegistryHive": "HKLM",
+                        "RegistryPath": "SOFTWARE\\Evil",
+                        "ValueName": "Payload",
+                        "ValueType": "DWord",
+                        "Value": "1",
+                        "WasConfigured": true
+                    }
+                ]
+            }
+            """;
+            File.WriteAllText(path, json);
+
+            int count = _backupService.RestoreFromFile(path);
+
+            // Only the known setting should be restored, the malicious one should be ignored
+            Assert.Equal(1, count);
+            _mockRegistry.Verify(r => r.SetValue(
+                "HKLM", @"SOFTWARE\Test", "TestValue1",
+                It.IsAny<object>(), It.IsAny<SettingValueType>()), Times.Once);
+            _mockRegistry.Verify(r => r.SetValue(
+                "HKLM", @"SOFTWARE\Evil", "Payload",
+                It.IsAny<object>(), It.IsAny<SettingValueType>()), Times.Never);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void RestoreFromFile_UsesKnownSettingPaths()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"wsm-test-backup-{Guid.NewGuid()}.json");
+        try
+        {
+            // Create a backup file where TEST-001 has a tampered registry path
+            var json = """
+            {
+                "CreatedAt": "2024-01-01T00:00:00Z",
+                "Entries": [
+                    {
+                        "SettingId": "TEST-001",
+                        "RegistryHive": "HKLM",
+                        "RegistryPath": "SOFTWARE\\Tampered",
+                        "ValueName": "TamperedValue",
+                        "ValueType": "DWord",
+                        "Value": "42",
+                        "WasConfigured": true
+                    }
+                ]
+            }
+            """;
+            File.WriteAllText(path, json);
+
+            int count = _backupService.RestoreFromFile(path);
+
+            Assert.Equal(1, count);
+            // Should use the known setting's path, not the tampered path from the file
+            _mockRegistry.Verify(r => r.SetValue(
+                "HKLM", @"SOFTWARE\Test", "TestValue1",
+                It.IsAny<object>(), It.IsAny<SettingValueType>()), Times.Once);
+            _mockRegistry.Verify(r => r.SetValue(
+                "HKLM", @"SOFTWARE\Tampered", "TamperedValue",
+                It.IsAny<object>(), It.IsAny<SettingValueType>()), Times.Never);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
 }

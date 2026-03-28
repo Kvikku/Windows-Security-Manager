@@ -18,10 +18,20 @@ ISecuritySettingProvider[] providers =
 
 var manager = new SecuritySettingsManager(registryService, providers);
 
-// Set up audit logger
-var logPath = Path.Combine(AppContext.BaseDirectory, "wsm-audit.log");
-var auditLogger = new AuditLogger(logPath);
-manager.SetAuditLogger(auditLogger);
+// Set up audit logger in a user-writable location
+var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WindowsSecurityManager");
+var logPath = Path.Combine(logDir, "wsm-audit.log");
+AuditLogger? auditLogger = null;
+try
+{
+    auditLogger = new AuditLogger(logPath);
+    manager.SetAuditLogger(auditLogger);
+}
+catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+{
+    Console.Error.WriteLine($"Warning: Could not initialize audit logging at '{logPath}': {ex.Message}");
+    Console.Error.WriteLine("Audit logging will be disabled for this session.");
+}
 
 // If no arguments provided, launch interactive mode
 if (args.Length == 0)

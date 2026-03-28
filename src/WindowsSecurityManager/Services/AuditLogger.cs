@@ -18,7 +18,7 @@ public class AuditLogger
     }
 
     /// <summary>
-    /// Logs a single action.
+    /// Logs a single action. IO errors are silently ignored to avoid disrupting the main workflow.
     /// </summary>
     public void Log(string action, string target, string? details = null)
     {
@@ -32,11 +32,18 @@ public class AuditLogger
 
         var line = FormatEntry(entry);
 
-        var dir = Path.GetDirectoryName(_logFilePath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
+        try
+        {
+            var dir = Path.GetDirectoryName(_logFilePath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
 
-        File.AppendAllText(_logFilePath, line + Environment.NewLine, Encoding.UTF8);
+            File.AppendAllText(_logFilePath, line + Environment.NewLine, Encoding.UTF8);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            // Silently ignore — logging should not break the main workflow
+        }
     }
 
     /// <summary>

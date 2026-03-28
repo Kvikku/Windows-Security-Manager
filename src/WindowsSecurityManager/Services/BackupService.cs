@@ -85,12 +85,16 @@ public class BackupService
     }
 
     /// <summary>
-    /// Restores settings from a backup file.
+    /// Restores settings from a backup file. Only entries matching known settings are restored.
     /// </summary>
     public int RestoreFromFile(string filePath)
     {
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"Backup file not found: {filePath}");
+
+        // Build a lookup of known settings by ID for validation
+        var knownSettings = _manager.GetSettings()
+            .ToDictionary(s => s.Id, s => s, StringComparer.OrdinalIgnoreCase);
 
         var json = File.ReadAllText(filePath);
         using var doc = JsonDocument.Parse(json);
@@ -104,6 +108,10 @@ public class BackupService
             var settingId = entry.GetProperty("SettingId").GetString();
             if (settingId == null) continue;
 
+            // Validate against known settings — reject entries that don't match
+            if (!knownSettings.TryGetValue(settingId, out var knownSetting))
+                continue;
+
             var wasConfigured = entry.GetProperty("WasConfigured").GetBoolean();
 
             if (wasConfigured)
@@ -112,9 +120,6 @@ public class BackupService
                 var valueTypeStr = entry.GetProperty("ValueType").GetString();
                 if (valueStr == null || valueTypeStr == null) continue;
 
-                var hive = entry.GetProperty("RegistryHive").GetString()!;
-                var path = entry.GetProperty("RegistryPath").GetString()!;
-                var valueName = entry.GetProperty("ValueName").GetString()!;
                 var valueType = Enum.Parse<SettingValueType>(valueTypeStr);
 
                 object value = valueType switch
@@ -124,16 +129,22 @@ public class BackupService
                     _ => valueStr
                 };
 
-                _registryService.SetValue(hive, path, valueName, value, valueType);
+                // Use the known setting's registry path instead of trusting the backup file
+                _registryService.SetValue(
+                    knownSetting.RegistryHive,
+                    knownSetting.RegistryPath,
+                    knownSetting.ValueName,
+                    value,
+                    valueType);
                 restored++;
             }
             else
             {
-                // The value didn't exist before — delete it to restore
-                var hive = entry.GetProperty("RegistryHive").GetString()!;
-                var path = entry.GetProperty("RegistryPath").GetString()!;
-                var valueName = entry.GetProperty("ValueName").GetString()!;
-                _registryService.DeleteValue(hive, path, valueName);
+                // The value didn't exist before — delete it to restore using the known path
+                _registryService.DeleteValue(
+                    knownSetting.RegistryHive,
+                    knownSetting.RegistryPath,
+                    knownSetting.ValueName);
                 restored++;
             }
         }

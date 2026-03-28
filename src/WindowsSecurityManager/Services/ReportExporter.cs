@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -35,6 +36,10 @@ public class ReportExporter
     /// </summary>
     public void ExportToFile(SecurityReport report, ExportFormat format, string filePath)
     {
+        var dir = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
         var content = Export(report, format);
         File.WriteAllText(filePath, content, Encoding.UTF8);
     }
@@ -159,6 +164,6 @@ public class ReportExporter
 
     private static string HtmlEncode(string value)
     {
-        return value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+        return WebUtility.HtmlEncode(value);
     }
 }
