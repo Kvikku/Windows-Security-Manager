@@ -9,6 +9,7 @@ public class SecuritySettingsManager
 {
     private readonly IRegistryService _registryService;
     private readonly List<SecuritySetting> _settings;
+    private AuditLogger? _auditLogger;
 
     public SecuritySettingsManager(IRegistryService registryService, IEnumerable<ISecuritySettingProvider> providers)
     {
@@ -19,6 +20,14 @@ public class SecuritySettingsManager
     }
 
     /// <summary>
+    /// Attaches an audit logger to record all enable/disable actions.
+    /// </summary>
+    public void SetAuditLogger(AuditLogger logger)
+    {
+        _auditLogger = logger;
+    }
+
+    /// <summary>
     /// Gets all registered settings, optionally filtered by category.
     /// </summary>
     public IReadOnlyList<SecuritySetting> GetSettings(SecurityCategory? category = null)
@@ -26,6 +35,21 @@ public class SecuritySettingsManager
         if (category.HasValue)
             return _settings.Where(s => s.Category == category.Value).ToList();
         return _settings;
+    }
+
+    /// <summary>
+    /// Searches settings by keyword across ID, name, and description.
+    /// </summary>
+    public IReadOnlyList<SecuritySetting> SearchSettings(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+            return _settings;
+
+        return _settings.Where(s =>
+            s.Id.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+            s.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+            s.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     /// <summary>
@@ -43,6 +67,8 @@ public class SecuritySettingsManager
             setting.ValueName,
             setting.EnabledValue,
             setting.ValueType);
+
+        _auditLogger?.Log("Enable", setting.Id, $"Set {setting.Name} to {setting.EnabledValue}");
         return true;
     }
 
@@ -61,6 +87,8 @@ public class SecuritySettingsManager
             setting.ValueName,
             setting.DisabledValue,
             setting.ValueType);
+
+        _auditLogger?.Log("Disable", setting.Id, $"Set {setting.Name} to {setting.DisabledValue}");
         return true;
     }
 
@@ -79,6 +107,8 @@ public class SecuritySettingsManager
                 setting.EnabledValue,
                 setting.ValueType);
         }
+
+        _auditLogger?.Log("EnableCategory", category.ToString(), $"Enabled {categorySettings.Count} settings");
         return categorySettings.Count;
     }
 
@@ -97,6 +127,8 @@ public class SecuritySettingsManager
                 setting.DisabledValue,
                 setting.ValueType);
         }
+
+        _auditLogger?.Log("DisableCategory", category.ToString(), $"Disabled {categorySettings.Count} settings");
         return categorySettings.Count;
     }
 
@@ -114,6 +146,8 @@ public class SecuritySettingsManager
                 setting.EnabledValue,
                 setting.ValueType);
         }
+
+        _auditLogger?.Log("EnableAll", "All settings", $"Enabled {_settings.Count} settings");
         return _settings.Count;
     }
 
@@ -131,7 +165,71 @@ public class SecuritySettingsManager
                 setting.DisabledValue,
                 setting.ValueType);
         }
+
+        _auditLogger?.Log("DisableAll", "All settings", $"Disabled {_settings.Count} settings");
         return _settings.Count;
+    }
+
+    /// <summary>
+    /// Enables specific settings by their IDs.
+    /// </summary>
+    public int EnableSettings(IEnumerable<string> settingIds)
+    {
+        int count = 0;
+        foreach (var id in settingIds)
+        {
+            if (EnableSetting(id)) count++;
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Disables specific settings by their IDs.
+    /// </summary>
+    public int DisableSettings(IEnumerable<string> settingIds)
+    {
+        int count = 0;
+        foreach (var id in settingIds)
+        {
+            if (DisableSetting(id)) count++;
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Previews what would change for an enable operation without writing to the registry.
+    /// </summary>
+    public IReadOnlyList<DryRunChange> DryRunEnable(IEnumerable<SecuritySetting> settings)
+    {
+        return settings.Select(s =>
+        {
+            var currentValue = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName);
+            return new DryRunChange
+            {
+                Setting = s,
+                CurrentValue = currentValue,
+                NewValue = s.EnabledValue,
+                IsCurrentlyConfigured = currentValue != null
+            };
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Previews what would change for a disable operation without writing to the registry.
+    /// </summary>
+    public IReadOnlyList<DryRunChange> DryRunDisable(IEnumerable<SecuritySetting> settings)
+    {
+        return settings.Select(s =>
+        {
+            var currentValue = _registryService.GetValue(s.RegistryHive, s.RegistryPath, s.ValueName);
+            return new DryRunChange
+            {
+                Setting = s,
+                CurrentValue = currentValue,
+                NewValue = s.DisabledValue,
+                IsCurrentlyConfigured = currentValue != null
+            };
+        }).ToList();
     }
 
     /// <summary>

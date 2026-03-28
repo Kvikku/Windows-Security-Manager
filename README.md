@@ -5,7 +5,17 @@ A Windows C# CLI application that enables and disables Windows security hardenin
 ## Features
 
 - **Enable/Disable** individual settings, entire categories, or all settings at once
+- **Multi-select** — Pick multiple settings to enable/disable in one batch
 - **Compliance Reporting** with detailed status of each security setting
+- **Export Reports** to JSON, CSV, or HTML for auditing and sharing
+- **Search/Filter** settings by keyword across names, IDs, and descriptions
+- **Security Profiles** — Apply presets like "CIS Level 1", "Maximum Security", or "Developer Workstation"
+- **Setting Detail View** — Drill into a single setting for full registry path, description, and current value
+- **Live Dashboard** — Per-category compliance bars on the interactive main menu
+- **Auto-refresh** — See updated compliance status immediately after changes
+- **Dry-run Mode** — Preview what would change without writing to the registry
+- **Backup/Restore** — Export current registry state before changes, and roll back if needed
+- **Audit Logging** — Timestamped log of all changes made
 - **Categorized Settings** for organized management:
   - **Windows Defender** – Real-time protection, PUA protection, cloud protection, threat actions
   - **Attack Surface Reduction (ASR)** – All 15 standard ASR rules
@@ -64,6 +74,12 @@ dotnet run --project src/WindowsSecurityManager -- list
 # List settings in a specific category
 dotnet run --project src/WindowsSecurityManager -- list --category WindowsDefender
 
+# Search settings by keyword
+dotnet run --project src/WindowsSecurityManager -- list --search "SMB"
+
+# View detail of a specific setting
+dotnet run --project src/WindowsSecurityManager -- detail DEF-001
+
 # Enable a specific setting
 dotnet run --project src/WindowsSecurityManager -- enable --setting DEF-001
 
@@ -73,6 +89,9 @@ dotnet run --project src/WindowsSecurityManager -- enable --category AttackSurfa
 # Enable all security settings
 dotnet run --project src/WindowsSecurityManager -- enable --all
 
+# Preview changes without writing (dry run)
+dotnet run --project src/WindowsSecurityManager -- enable --all --dry-run
+
 # Disable a specific setting
 dotnet run --project src/WindowsSecurityManager -- disable --setting CIS-001
 
@@ -81,6 +100,30 @@ dotnet run --project src/WindowsSecurityManager -- report
 
 # Report on a specific category
 dotnet run --project src/WindowsSecurityManager -- report --category Firewall
+
+# Export report to JSON
+dotnet run --project src/WindowsSecurityManager -- report --format Json --output report.json
+
+# Export report to CSV
+dotnet run --project src/WindowsSecurityManager -- report --format Csv --output report.csv
+
+# Export report to HTML
+dotnet run --project src/WindowsSecurityManager -- report --format Html --output report.html
+
+# List available security profiles
+dotnet run --project src/WindowsSecurityManager -- profile --list
+
+# Apply a security profile
+dotnet run --project src/WindowsSecurityManager -- profile --apply "CIS Level 1"
+
+# Preview a profile (dry run)
+dotnet run --project src/WindowsSecurityManager -- profile --apply "Maximum Security" --dry-run
+
+# Backup current registry state
+dotnet run --project src/WindowsSecurityManager -- backup --output my-backup.json
+
+# Restore from backup
+dotnet run --project src/WindowsSecurityManager -- restore my-backup.json
 ```
 
 ## Test
@@ -153,15 +196,21 @@ ISecuritySettingProvider[] providers =
 ├── .github/workflows/
 │   └── release.yml        # CI/CD: build & release executable
 ├── src/WindowsSecurityManager/
-│   ├── Commands/          # CLI command handlers (enable, disable, report, list)
-│   ├── Definitions/       # Security setting definitions by category
-│   ├── Models/            # Data models (SecuritySetting, SecurityReport, etc.)
-│   ├── Services/          # Core services (registry, settings manager)
+│   ├── Commands/          # CLI command handlers (enable, disable, report, list, detail, profile, backup, restore)
+│   ├── Definitions/       # Security setting definitions by category + security profiles
+│   ├── Models/            # Data models (SecuritySetting, SecurityReport, SecurityProfile, etc.)
+│   ├── Services/          # Core services (registry, settings manager, report exporter, audit logger, backup)
+│   ├── UI/                # Interactive terminal menu (Spectre.Console)
 │   └── Program.cs         # Application entry point
 ├── tests/WindowsSecurityManager.Tests/
 │   ├── SecuritySettingsManagerTests.cs
 │   ├── SettingDefinitionTests.cs
-│   └── SecurityReportTests.cs
+│   ├── SecurityReportTests.cs
+│   ├── SearchAndDryRunTests.cs
+│   ├── ReportExporterTests.cs
+│   ├── AuditLoggerTests.cs
+│   ├── BackupServiceTests.cs
+│   └── SecurityProfileTests.cs
 └── WindowsSecurityManager.slnx
 ```
 

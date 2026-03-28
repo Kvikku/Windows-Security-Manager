@@ -18,10 +18,25 @@ ISecuritySettingProvider[] providers =
 
 var manager = new SecuritySettingsManager(registryService, providers);
 
+// Set up audit logger in a user-writable location
+var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WindowsSecurityManager");
+var logPath = Path.Combine(logDir, "wsm-audit.log");
+AuditLogger? auditLogger = null;
+try
+{
+    auditLogger = new AuditLogger(logPath);
+    manager.SetAuditLogger(auditLogger);
+}
+catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+{
+    Console.Error.WriteLine($"Warning: Could not initialize audit logging at '{logPath}': {ex.Message}");
+    Console.Error.WriteLine("Audit logging will be disabled for this session.");
+}
+
 // If no arguments provided, launch interactive mode
 if (args.Length == 0)
 {
-    var menu = new InteractiveMenu(manager);
+    var menu = new InteractiveMenu(manager, registryService, auditLogger);
     menu.Run();
     return 0;
 }
@@ -33,5 +48,9 @@ rootCommand.AddCommand(EnableCommand.Create(manager));
 rootCommand.AddCommand(DisableCommand.Create(manager));
 rootCommand.AddCommand(ReportCommand.Create(manager));
 rootCommand.AddCommand(ListCommand.Create(manager));
+rootCommand.AddCommand(DetailCommand.Create(manager));
+rootCommand.AddCommand(ProfileCommand.Create(manager));
+rootCommand.AddCommand(BackupCommand.Create(manager, registryService, auditLogger));
+rootCommand.AddCommand(RestoreCommand.Create(manager, registryService, auditLogger));
 
 return await rootCommand.InvokeAsync(args);

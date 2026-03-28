@@ -5,7 +5,7 @@ using WindowsSecurityManager.Services;
 namespace WindowsSecurityManager.Commands;
 
 /// <summary>
-/// CLI command to generate a compliance report on security settings.
+/// CLI command to generate a compliance report, with optional export to file.
 /// </summary>
 public static class ReportCommand
 {
@@ -14,13 +14,37 @@ public static class ReportCommand
         var command = new Command("report", "Generate a compliance report on security settings");
 
         var categoryOption = new Option<SecurityCategory?>("--category", "Report on a specific category only");
+        var formatOption = new Option<ExportFormat?>("--format", "Export format: Json, Csv, or Html");
+        var outputOption = new Option<string?>("--output", "File path to export the report to");
 
         command.AddOption(categoryOption);
+        command.AddOption(formatOption);
+        command.AddOption(outputOption);
 
-        command.SetHandler((category) =>
+        command.SetHandler((category, format, output) =>
         {
             var report = manager.GenerateReport(category);
 
+            // Export to file if requested
+            if (format.HasValue || !string.IsNullOrWhiteSpace(output))
+            {
+                var exportFormat = format ?? ExportFormat.Json;
+                var exporter = new ReportExporter();
+
+                if (!string.IsNullOrWhiteSpace(output))
+                {
+                    exporter.ExportToFile(report, exportFormat, output);
+                    Console.WriteLine($"Report exported to '{output}' ({exportFormat} format).");
+                }
+                else
+                {
+                    var content = exporter.Export(report, exportFormat);
+                    Console.Write(content);
+                }
+                return;
+            }
+
+            // Default: console display
             Console.WriteLine("╔══════════════════════════════════════════════════════════════════╗");
             Console.WriteLine("║           Windows Security Manager - Compliance Report          ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════════════╝");
@@ -64,7 +88,7 @@ public static class ReportCommand
                 }
                 Console.WriteLine();
             }
-        }, categoryOption);
+        }, categoryOption, formatOption, outputOption);
 
         return command;
     }
