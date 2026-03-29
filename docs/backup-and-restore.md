@@ -5,7 +5,7 @@ Windows Security Manager can back up the current registry state for all managed 
 ## How It Works
 
 - **Backup** reads the current value (or absence of a value) for every managed registry key and saves it to a JSON file.
-- **Restore** reads the backup file and writes each value back to the registry, returning settings to exactly how they were at backup time.
+- **Restore** reads the backup file and writes each value back to the registry for matching known setting IDs, returning those settings to the backed-up state.
 - Entries in the backup file that don't match a known setting ID are **skipped** for security — the tool never writes arbitrary registry paths from a backup file.
 
 ## Creating a Backup

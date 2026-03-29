@@ -5,7 +5,7 @@
 [![Build and Release](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/release.yml/badge.svg)](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/release.yml)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white)
-![License](https://img.shields.io/badge/license-as--is-gray)
+![Usage](https://img.shields.io/badge/usage-no__public__license-red)
 ![Settings](https://img.shields.io/badge/security_settings-98-green)
 
 **A powerful CLI tool for managing Windows security hardening settings.**\
@@ -68,7 +68,7 @@ Enable, disable, audit, and report on Windows Defender, ASR rules, firewall, CIS
 
 **🔄 Safety & Operations**
 - Backup/restore registry state
-- Dry-run mode for all operations
+- Dry-run support for enable/disable and profile apply operations
 - Timestamped audit logging
 - Search/filter across all settings
 
@@ -105,10 +105,10 @@ WindowsSecurityManager.exe enable --setting DEF-001
 
 ### Requirements
 
-| | Requirement |
+| Requirement | Details |
 |---|---|
-| 💻 | Windows 10/11 or Windows Server 2016+ |
-| 🔑 | Administrator privileges (for registry changes) |
+| 💻 Operating System | Windows 10/11 or Windows Server 2016+ |
+| 🔑 Privileges | Administrator (for registry changes) |
 
 > **For development:** [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
 
@@ -269,4 +269,4 @@ A GitHub Actions workflow automatically builds and publishes the executable:
 
 ## 📄 License
 
-This project is provided as-is for security hardening purposes.
+This project is provided as-is for security hardening purposes. No public license is included — see the repository for usage terms.

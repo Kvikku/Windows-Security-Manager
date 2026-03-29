@@ -45,7 +45,7 @@ public class MyCustomSettings : ISecuritySettingProvider
 | `RegistryHive` | `string` | Registry hive (e.g., `HKLM`, `HKCU`). |
 | `RegistryPath` | `string` | Registry key path. |
 | `ValueName` | `string` | Registry value name within the key. |
-| `ValueType` | `SettingValueType` | `DWord`, `QWord`, or `String`. |
+| `ValueType` | `SettingValueType` | `DWord`, `QWord`, `String`, `Binary`, `MultiString`, or `ExpandString`. Built-in settings primarily use `DWord`. |
 | `EnabledValue` | `object` | The value that represents the hardened/enabled state. |
 | `DisabledValue` | `object` | The value that represents the unhardened/disabled state. |
 | `RecommendedValue` | `object` | The value recommended by security benchmarks (usually matches `EnabledValue`). |
@@ -69,11 +69,16 @@ public enum SecurityCategory
 ```csharp
 public enum SettingValueType
 {
-    DWord,   // 32-bit integer (REG_DWORD)
-    QWord,   // 64-bit integer (REG_QWORD)
-    String   // String value (REG_SZ)
+    DWord,        // 32-bit integer (REG_DWORD)
+    QWord,        // 64-bit integer (REG_QWORD)
+    String,       // String value (REG_SZ)
+    Binary,       // Binary data (REG_BINARY)
+    MultiString,  // Multi-string value (REG_MULTI_SZ)
+    ExpandString  // Expandable string (REG_EXPAND_SZ)
 }
 ```
+
+> **Note:** Built-in settings primarily use `DWord`. The other types are available for custom settings that need them.
 
 ## Step 2 — Register the Provider
 

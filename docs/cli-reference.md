@@ -178,20 +178,28 @@ See [Security Profiles](security-profiles.md) for detailed profile descriptions.
 
 ## `backup`
 
-Export the current registry state for all managed settings to a JSON file.
+Export the current registry state for managed settings to a JSON file.
 
 ```bash
-WindowsSecurityManager.exe backup --output <path>
+WindowsSecurityManager.exe backup [options]
 ```
 
 | Option | Description |
 |---|---|
-| `--output <path>` | **(Required)** Path for the backup JSON file |
+| `--output <path>` | Path for the backup JSON file (defaults to `wsm-backup-<timestamp>.json`) |
+| `--category <name>` | Back up only a specific category |
 
-**Example:**
+**Examples:**
 
 ```bash
+# Backup all settings (auto-generated filename)
+WindowsSecurityManager.exe backup
+
+# Backup to a specific file
 WindowsSecurityManager.exe backup --output my-backup.json
+
+# Backup only firewall settings
+WindowsSecurityManager.exe backup --category Firewall
 ```
 
 ---
