@@ -58,7 +58,7 @@ public class FirewallSettings : ISecuritySettingProvider
             ValueName = "DefaultOutboundAction",
             ValueType = SettingValueType.DWord,
             EnabledValue = 0,
-            DisabledValue = 0,
+            DisabledValue = 1,
             RecommendedValue = 0
         };
 
@@ -149,7 +149,7 @@ public class FirewallSettings : ISecuritySettingProvider
             ValueName = "DefaultOutboundAction",
             ValueType = SettingValueType.DWord,
             EnabledValue = 0,
-            DisabledValue = 0,
+            DisabledValue = 1,
             RecommendedValue = 0
         };
 
@@ -240,7 +240,7 @@ public class FirewallSettings : ISecuritySettingProvider
             ValueName = "DefaultOutboundAction",
             ValueType = SettingValueType.DWord,
             EnabledValue = 0,
-            DisabledValue = 0,
+            DisabledValue = 1,
             RecommendedValue = 0
         };
 
