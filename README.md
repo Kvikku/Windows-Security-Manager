@@ -238,7 +238,7 @@ dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj \
 
 ```
 ├── .github/workflows/
-│   ├── ci.yml                    # CI: build, lint, test, coverage on push/PR
+│   ├── ci.yml                    # CI: restore, format check, build, test, coverage on push/PR
 │   └── release.yml               # CD: build & release executable on tags
 ├── docs/                         # 📚 Documentation and how-to guides
 ├── src/WindowsSecurityManager/

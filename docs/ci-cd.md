@@ -35,7 +35,7 @@ workflow_dispatch ──►                              │
 | 2 | **Setup .NET** | Installs .NET 8.0 SDK |
 | 3 | **Cache NuGet** | Restores cached NuGet packages for faster builds |
 | 4 | **Restore** | Runs `dotnet restore` to download any missing dependencies |
-| 5 | **Format check** | Runs `dotnet format --verify-no-changes` to enforce consistent code style |
+| 5 | **Format check** | Runs `dotnet format --verify-no-changes --no-restore` to enforce consistent code style |
 | 6 | **Build** | Compiles the solution in Release configuration |
 | 7 | **Test + Coverage** | Runs all xUnit tests and collects code coverage using Coverlet |
 | 8 | **Upload coverage** | Uploads Cobertura XML coverage report as a workflow artifact |
