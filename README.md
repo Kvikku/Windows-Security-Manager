@@ -2,6 +2,7 @@
 
 # 🛡️ Windows Security Manager
 
+[![CI](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/ci.yml/badge.svg)](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/ci.yml)
 [![Build and Release](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/release.yml/badge.svg)](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/release.yml)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white)
@@ -229,6 +230,7 @@ dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj \
 | [CLI Reference](docs/cli-reference.md) | Complete command reference with all options and examples |
 | [Security Profiles](docs/security-profiles.md) | Detailed guide to built-in security profiles |
 | [Backup & Restore](docs/backup-and-restore.md) | How to safely back up and restore security settings |
+| [CI/CD Pipeline](docs/ci-cd.md) | How the build and release pipeline works |
 | [Extending Settings](docs/extending-settings.md) | How to add your own custom security settings |
 | [Architecture](docs/architecture.md) | System design, components, and project structure |
 
@@ -236,28 +238,51 @@ dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj \
 
 ```
 ├── .github/workflows/
-│   └── release.yml              # CI/CD: build & release executable
-├── docs/                        # 📚 Documentation and how-to guides
+│   ├── ci.yml                    # CI: build, lint, test, coverage on push/PR
+│   └── release.yml               # CD: build & release executable on tags
+├── docs/                         # 📚 Documentation and how-to guides
 ├── src/WindowsSecurityManager/
-│   ├── Commands/                # CLI command handlers
-│   ├── Definitions/             # Security setting definitions & profiles
-│   ├── Models/                  # Data models
-│   ├── Services/                # Core services (registry, manager, exporter, backup, logger)
-│   ├── UI/                      # Interactive terminal menu (Spectre.Console)
-│   └── Program.cs               # Application entry point
+│   ├── Commands/                 # CLI command handlers
+│   ├── Definitions/              # Security setting definitions & profiles
+│   ├── Models/                   # Data models
+│   ├── Services/                 # Core services (registry, manager, exporter, backup, logger)
+│   ├── UI/                       # Interactive terminal menu (Spectre.Console)
+│   └── Program.cs                # Application entry point
 ├── tests/WindowsSecurityManager.Tests/
-│   └── *.cs                     # Unit tests (86 tests)
+│   └── *.cs                      # Unit tests (xUnit + Moq)
 └── WindowsSecurityManager.slnx
 ```
 
 ## ⚙️ CI/CD
 
-A GitHub Actions workflow automatically builds and publishes the executable:
+Two GitHub Actions workflows automate quality checks, builds, and releases:
+
+### CI (`ci.yml`) — Every Push & Pull Request
+
+Runs on every push and pull request targeting `main`. Acts as a quality gate before merging.
+
+| Step | Description |
+|---|---|
+| **Restore** | Restores NuGet packages (with caching for speed) |
+| **Format check** | Verifies code style with `dotnet format --verify-no-changes` |
+| **Build** | Compiles in Release configuration |
+| **Test + Coverage** | Runs all xUnit tests and collects code coverage via Coverlet |
+| **Upload coverage** | Uploads Cobertura coverage report as a workflow artifact |
+
+### Release (`release.yml`) — Tag Push & Manual Dispatch
+
+Builds and publishes the standalone executable.
 
 | Trigger | Behavior |
 |---|---|
 | **Tag push** (`v*`) | Builds, tests, and creates a GitHub Release with the `.exe` attached |
 | **Manual dispatch** | Builds on demand; artifact available from the workflow run |
+
+**Release pipeline steps:** restore → test → publish (single-file, self-contained, win-x64) → upload artifact → create GitHub Release.
+
+Both workflows use **NuGet package caching** (`actions/cache`) to speed up dependency restoration.
+
+> See [CI/CD Pipeline](docs/ci-cd.md) for full details on the pipeline architecture.
 
 ## 🤝 Contributing
 
