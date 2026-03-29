@@ -9,36 +9,26 @@ namespace WindowsSecurityManager.Tests;
 [Collection("Console")]
 public class ListCommandTests : IDisposable
 {
-    private readonly Mock<IRegistryService> _mockRegistry;
-    private readonly SecuritySettingsManager _manager;
-    private readonly TextWriter _originalOut;
-    private readonly StringWriter _writer;
+    private readonly CommandTestContext _context;
 
     public ListCommandTests()
     {
-        _mockRegistry = new Mock<IRegistryService>();
-        _manager = new SecuritySettingsManager(_mockRegistry.Object, new[] { new TestSettingProvider() });
-        _originalOut = Console.Out;
-        _writer = new StringWriter();
-        Console.SetOut(_writer);
+        _context = new CommandTestContext();
     }
 
     public void Dispose()
     {
-        Console.SetOut(_originalOut);
-        _writer.Dispose();
+        _context.Dispose();
     }
-
-    private string GetOutput() => _writer.ToString();
 
     [Fact]
     public async Task List_NoFilters_ShowsAllSettings()
     {
-        var cmd = ListCommand.Create(_manager);
+        var cmd = ListCommand.Create(_context.Manager);
 
         await cmd.InvokeAsync(Array.Empty<string>());
 
-        var output = GetOutput();
+        var output = _context.GetOutput();
         Assert.Contains("TEST-001", output);
         Assert.Contains("TEST-002", output);
         Assert.Contains("TEST-003", output);
@@ -48,11 +38,11 @@ public class ListCommandTests : IDisposable
     [Fact]
     public async Task List_WithCategory_FiltersSettings()
     {
-        var cmd = ListCommand.Create(_manager);
+        var cmd = ListCommand.Create(_context.Manager);
 
         await cmd.InvokeAsync(new[] { "--category", "WindowsDefender" });
 
-        var output = GetOutput();
+        var output = _context.GetOutput();
         Assert.Contains("TEST-001", output);
         Assert.Contains("TEST-002", output);
         Assert.DoesNotContain("TEST-003", output);
@@ -62,11 +52,11 @@ public class ListCommandTests : IDisposable
     [Fact]
     public async Task List_WithSearch_SearchesSettings()
     {
-        var cmd = ListCommand.Create(_manager);
+        var cmd = ListCommand.Create(_context.Manager);
 
         await cmd.InvokeAsync(new[] { "--search", "Firewall" });
 
-        var output = GetOutput();
+        var output = _context.GetOutput();
         Assert.Contains("TEST-003", output);
         Assert.Contains("Search: \"Firewall\"", output);
         Assert.Contains("Total: 1 settings", output);
@@ -75,11 +65,11 @@ public class ListCommandTests : IDisposable
     [Fact]
     public async Task List_WithSearchAndCategory_AppliesBothFilters()
     {
-        var cmd = ListCommand.Create(_manager);
+        var cmd = ListCommand.Create(_context.Manager);
 
         await cmd.InvokeAsync(new[] { "--search", "Test", "--category", "WindowsDefender" });
 
-        var output = GetOutput();
+        var output = _context.GetOutput();
         Assert.Contains("TEST-001", output);
         Assert.Contains("TEST-002", output);
         Assert.DoesNotContain("TEST-003", output);
