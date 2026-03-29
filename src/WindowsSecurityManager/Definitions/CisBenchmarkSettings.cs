@@ -276,7 +276,7 @@ public class CisBenchmarkSettings : ISecuritySettingProvider
         yield return new SecuritySetting
         {
             Id = "CIS-018",
-            Name = "Disable Remote Assistance",
+            Name = "Disable User-Requested Remote Assistance",
             Description = "Prevents users from requesting Remote Assistance.",
             Category = SecurityCategory.CisBenchmark,
             RegistryHive = Hive,

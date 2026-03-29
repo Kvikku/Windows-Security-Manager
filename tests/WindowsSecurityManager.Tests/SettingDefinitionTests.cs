@@ -141,6 +141,6 @@ public class SettingDefinitionTests
         allSettings.AddRange(new NetworkSecuritySettings().GetSettings());
 
         Assert.All(allSettings, s =>
-            Assert.NotEqual(s.EnabledValue?.ToString(), s.DisabledValue?.ToString()));
+            Assert.NotEqual(s.EnabledValue, s.DisabledValue));
     }
 }
