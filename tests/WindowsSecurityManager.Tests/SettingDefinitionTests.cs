@@ -128,4 +128,19 @@ public class SettingDefinitionTests
             Assert.NotEmpty(s.ValueName);
         });
     }
+
+    [Fact]
+    public void AllProviders_HaveDistinctEnabledAndDisabledValues()
+    {
+        var allSettings = new List<SecuritySetting>();
+        allSettings.AddRange(new DefenderSettings().GetSettings());
+        allSettings.AddRange(new AsrSettings().GetSettings());
+        allSettings.AddRange(new FirewallSettings().GetSettings());
+        allSettings.AddRange(new CisBenchmarkSettings().GetSettings());
+        allSettings.AddRange(new AccountPolicySettings().GetSettings());
+        allSettings.AddRange(new NetworkSecuritySettings().GetSettings());
+
+        Assert.All(allSettings, s =>
+            Assert.NotEqual(s.EnabledValue?.ToString(), s.DisabledValue?.ToString()));
+    }
 }

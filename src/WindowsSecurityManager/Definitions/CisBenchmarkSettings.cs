@@ -246,8 +246,8 @@ public class CisBenchmarkSettings : ISecuritySettingProvider
         yield return new SecuritySetting
         {
             Id = "CIS-016",
-            Name = "Enable DEP (Data Execution Prevention)",
-            Description = "Enables Data Execution Prevention for all programs and services.",
+            Name = "Enable Mandatory ASLR",
+            Description = "Enables mandatory Address Space Layout Randomization for all images.",
             Category = SecurityCategory.CisBenchmark,
             RegistryHive = Hive,
             RegistryPath = @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management",
@@ -277,7 +277,7 @@ public class CisBenchmarkSettings : ISecuritySettingProvider
         {
             Id = "CIS-018",
             Name = "Disable Remote Assistance",
-            Description = "Disables unsolicited remote assistance offers.",
+            Description = "Prevents users from requesting Remote Assistance.",
             Category = SecurityCategory.CisBenchmark,
             RegistryHive = Hive,
             RegistryPath = @"SYSTEM\CurrentControlSet\Control\Remote Assistance",
@@ -441,8 +441,8 @@ public class CisBenchmarkSettings : ISecuritySettingProvider
         yield return new SecuritySetting
         {
             Id = "CIS-029",
-            Name = "Disable Solicited Remote Assistance",
-            Description = "Disables solicited remote assistance.",
+            Name = "Disable Unsolicited Remote Assistance",
+            Description = "Prevents administrators from offering Remote Assistance without user request.",
             Category = SecurityCategory.CisBenchmark,
             RegistryHive = Hive,
             RegistryPath = @"SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services",
@@ -463,9 +463,9 @@ public class CisBenchmarkSettings : ISecuritySettingProvider
             RegistryPath = @"SYSTEM\CurrentControlSet\Control\Lsa",
             ValueName = "TurnOffAnonymousBlock",
             ValueType = SettingValueType.DWord,
-            EnabledValue = 1,
-            DisabledValue = 0,
-            RecommendedValue = 1
+            EnabledValue = 0,
+            DisabledValue = 1,
+            RecommendedValue = 0
         };
     }
 }
