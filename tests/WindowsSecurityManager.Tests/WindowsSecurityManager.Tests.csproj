@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WindowsSecurityManager\WindowsSecurityManager.csproj" />
+    <ProjectReference Include="..\..\src\WindowsSecurityManager.Core\WindowsSecurityManager.Core.csproj" />
   </ItemGroup>
 
 </Project>
