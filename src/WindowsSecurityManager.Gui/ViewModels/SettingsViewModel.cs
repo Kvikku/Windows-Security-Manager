@@ -41,6 +41,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
+    /// <summary>
+    /// Indicates whether the last enable/disable operation succeeded.
+    /// </summary>
+    [ObservableProperty]
+    private bool _lastOperationSucceeded;
+
     partial void OnSelectedCategoryChanged(SecurityCategory? value) => _ = RefreshSettingsAsync();
     partial void OnSearchTextChanged(string value) => _ = DebouncedRefreshAsync();
 
@@ -49,9 +55,13 @@ public partial class SettingsViewModel : ObservableObject
     /// </summary>
     private async Task DebouncedRefreshAsync()
     {
-        _searchCts?.Cancel();
+        var oldCts = _searchCts;
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
+
+        // Dispose the previous CancellationTokenSource after cancelling
+        oldCts?.Cancel();
+        oldCts?.Dispose();
 
         try
         {
@@ -108,29 +118,23 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     public void EnableSetting(string settingId)
     {
-        if (_manager.EnableSetting(settingId))
-        {
-            StatusMessage = $"Enabled: {settingId}";
+        LastOperationSucceeded = _manager.EnableSetting(settingId);
+        StatusMessage = LastOperationSucceeded
+            ? $"Enabled: {settingId}"
+            : $"Failed to enable: {settingId}";
+        if (LastOperationSucceeded)
             _ = RefreshSettingsAsync();
-        }
-        else
-        {
-            StatusMessage = $"Failed to enable: {settingId}";
-        }
     }
 
     [RelayCommand]
     public void DisableSetting(string settingId)
     {
-        if (_manager.DisableSetting(settingId))
-        {
-            StatusMessage = $"Disabled: {settingId}";
+        LastOperationSucceeded = _manager.DisableSetting(settingId);
+        StatusMessage = LastOperationSucceeded
+            ? $"Disabled: {settingId}"
+            : $"Failed to disable: {settingId}";
+        if (LastOperationSucceeded)
             _ = RefreshSettingsAsync();
-        }
-        else
-        {
-            StatusMessage = $"Failed to disable: {settingId}";
-        }
     }
 
     [RelayCommand]
