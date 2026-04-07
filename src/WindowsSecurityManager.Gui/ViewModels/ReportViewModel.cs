@@ -19,19 +19,19 @@ public partial class ReportViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private SecurityCategory? _selectedCategory;
+    public partial SecurityCategory? SelectedCategory { get; set; }
 
     [ObservableProperty]
-    private List<SecurityCategory> _categoryOptions = [];
+    public partial List<SecurityCategory> CategoryOptions { get; set; } = [];
 
     [ObservableProperty]
-    private SecurityReport? _report;
+    public partial SecurityReport? Report { get; set; }
 
     [ObservableProperty]
-    private string _statusMessage = "";
+    public partial string StatusMessage { get; set; } = "";
 
     [ObservableProperty]
-    private ExportFormat _selectedFormat = ExportFormat.Html;
+    public partial ExportFormat SelectedFormat { get; set; } = ExportFormat.Html;
 
     [RelayCommand]
     public async Task GenerateReportAsync()

@@ -19,22 +19,22 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private double _overallCompliance;
+    public partial double OverallCompliance { get; set; }
 
     [ObservableProperty]
-    private int _totalSettings;
+    public partial int TotalSettings { get; set; }
 
     [ObservableProperty]
-    private int _enabledCount;
+    public partial int EnabledCount { get; set; }
 
     [ObservableProperty]
-    private int _disabledCount;
+    public partial int DisabledCount { get; set; }
 
     [ObservableProperty]
-    private int _notConfiguredCount;
+    public partial int NotConfiguredCount { get; set; }
 
     [ObservableProperty]
-    private List<CategoryComplianceItem> _categories = [];
+    public partial List<CategoryComplianceItem> Categories { get; set; } = [];
 
     [RelayCommand]
     public void Refresh()

@@ -23,29 +23,29 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private List<SettingItemViewModel> _settings = [];
+    public partial List<SettingItemViewModel> Settings { get; set; } = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ClearCategoryFilterCommand))]
-    private SecurityCategory? _selectedCategory;
+    public partial SecurityCategory? SelectedCategory { get; set; }
 
     [ObservableProperty]
-    private string _searchText = "";
+    public partial string SearchText { get; set; } = "";
 
     [ObservableProperty]
-    private List<SecurityCategory> _categoryOptions = [];
+    public partial List<SecurityCategory> CategoryOptions { get; set; } = [];
 
     [ObservableProperty]
-    private List<SecurityProfile> _profileOptions = [];
+    public partial List<SecurityProfile> ProfileOptions { get; set; } = [];
 
     [ObservableProperty]
-    private string _statusMessage = "";
+    public partial string StatusMessage { get; set; } = "";
 
     /// <summary>
     /// Indicates whether the last enable/disable operation succeeded.
     /// </summary>
     [ObservableProperty]
-    private bool _lastOperationSucceeded;
+    public partial bool LastOperationSucceeded { get; set; }
 
     partial void OnSelectedCategoryChanged(SecurityCategory? value) => _ = RefreshSettingsAsync();
     partial void OnSearchTextChanged(string value) => _ = DebouncedRefreshAsync();
