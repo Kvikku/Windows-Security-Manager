@@ -32,15 +32,27 @@ public partial class BackupViewModel : ObservableObject
     [RelayCommand]
     public async Task CreateBackupAsync()
     {
-        var service = new BackupService(_manager, _registryService);
-        var backup = service.CreateBackup(SelectedCategory);
+        try
+        {
+            StatusMessage = "Creating backup...";
+            var category = SelectedCategory;
+            var fileName = $"wsm-backup-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+            var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var filePath = Path.Combine(desktopPath, fileName);
 
-        var fileName = $"wsm-backup-{DateTime.Now:yyyyMMdd-HHmmss}.json";
-        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        var filePath = Path.Combine(desktopPath, fileName);
-
-        await Task.Run(() => service.SaveToFile(backup, filePath));
-        StatusMessage = $"Backup saved: {filePath} ({backup.Entries.Count} settings)";
+            var entryCount = await Task.Run(() =>
+            {
+                var service = new BackupService(_manager, _registryService);
+                var backup = service.CreateBackup(category);
+                service.SaveToFile(backup, filePath);
+                return backup.Entries.Count;
+            });
+            StatusMessage = $"Backup saved: {filePath} ({entryCount} settings)";
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or DirectoryNotFoundException)
+        {
+            StatusMessage = $"Backup failed: {ex.Message}";
+        }
     }
 
     [RelayCommand]

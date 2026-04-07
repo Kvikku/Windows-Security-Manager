@@ -12,13 +12,14 @@ namespace WindowsSecurityManager.Gui.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly SecuritySettingsManager _manager;
+    private CancellationTokenSource? _searchCts;
 
     public SettingsViewModel()
     {
         _manager = App.SettingsManager;
         CategoryOptions = [.. Enum.GetValues<SecurityCategory>()];
         ProfileOptions = SecurityProfiles.GetProfiles().ToList();
-        RefreshSettings();
+        _ = RefreshSettingsAsync();
     }
 
     [ObservableProperty]
@@ -40,39 +41,68 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
-    partial void OnSelectedCategoryChanged(SecurityCategory? value) => RefreshSettings();
-    partial void OnSearchTextChanged(string value) => RefreshSettings();
+    partial void OnSelectedCategoryChanged(SecurityCategory? value) => _ = RefreshSettingsAsync();
+    partial void OnSearchTextChanged(string value) => _ = DebouncedRefreshAsync();
+
+    /// <summary>
+    /// Debounces search input to avoid triggering registry reads on every keystroke.
+    /// </summary>
+    private async Task DebouncedRefreshAsync()
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(300, token);
+            if (!token.IsCancellationRequested)
+                await RefreshSettingsAsync();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when a new keystroke cancels the previous delay
+        }
+    }
 
     [RelayCommand]
-    public void RefreshSettings()
+    public async Task RefreshSettingsAsync()
     {
-        var allSettings = string.IsNullOrWhiteSpace(SearchText)
-            ? _manager.GetSettings(SelectedCategory)
-            : _manager.SearchSettings(SearchText);
+        var searchText = SearchText;
+        var category = SelectedCategory;
 
-        if (SelectedCategory.HasValue && !string.IsNullOrWhiteSpace(SearchText))
+        var items = await Task.Run(() =>
         {
-            allSettings = allSettings
-                .Where(s => s.Category == SelectedCategory.Value)
-                .ToList();
-        }
+            var allSettings = string.IsNullOrWhiteSpace(searchText)
+                ? _manager.GetSettings(category)
+                : _manager.SearchSettings(searchText);
 
-        Settings = allSettings.Select(s =>
-        {
-            var status = _manager.GetSettingStatus(s);
-            return new SettingItemViewModel
+            if (category.HasValue && !string.IsNullOrWhiteSpace(searchText))
             {
-                Id = s.Id,
-                Name = s.Name,
-                Description = s.Description,
-                Category = s.Category,
-                IsEnabled = status.IsEnabled,
-                IsConfigured = status.IsConfigured,
-                CurrentValue = status.CurrentValue?.ToString() ?? "Not configured",
-                ExpectedValue = s.EnabledValue.ToString() ?? "",
-                MatchesRecommended = status.MatchesRecommended
-            };
-        }).ToList();
+                allSettings = allSettings
+                    .Where(s => s.Category == category.Value)
+                    .ToList();
+            }
+
+            return allSettings.Select(s =>
+            {
+                var status = _manager.GetSettingStatus(s);
+                return new SettingItemViewModel
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    Category = s.Category,
+                    IsEnabled = status.IsEnabled,
+                    IsConfigured = status.IsConfigured,
+                    CurrentValue = status.CurrentValue?.ToString() ?? "Not configured",
+                    ExpectedValue = s.EnabledValue.ToString() ?? "",
+                    MatchesRecommended = status.MatchesRecommended
+                };
+            }).ToList();
+        });
+
+        Settings = items;
     }
 
     [RelayCommand]
@@ -81,7 +111,11 @@ public partial class SettingsViewModel : ObservableObject
         if (_manager.EnableSetting(settingId))
         {
             StatusMessage = $"Enabled: {settingId}";
-            RefreshSettings();
+            _ = RefreshSettingsAsync();
+        }
+        else
+        {
+            StatusMessage = $"Failed to enable: {settingId}";
         }
     }
 
@@ -91,7 +125,11 @@ public partial class SettingsViewModel : ObservableObject
         if (_manager.DisableSetting(settingId))
         {
             StatusMessage = $"Disabled: {settingId}";
-            RefreshSettings();
+            _ = RefreshSettingsAsync();
+        }
+        else
+        {
+            StatusMessage = $"Failed to disable: {settingId}";
         }
     }
 
@@ -102,7 +140,7 @@ public partial class SettingsViewModel : ObservableObject
             ? _manager.EnableCategory(SelectedCategory.Value)
             : _manager.EnableAll();
         StatusMessage = $"Enabled {count} settings";
-        RefreshSettings();
+        _ = RefreshSettingsAsync();
     }
 
     [RelayCommand]
@@ -112,7 +150,7 @@ public partial class SettingsViewModel : ObservableObject
             ? _manager.DisableCategory(SelectedCategory.Value)
             : _manager.DisableAll();
         StatusMessage = $"Disabled {count} settings";
-        RefreshSettings();
+        _ = RefreshSettingsAsync();
     }
 
     [RelayCommand]
@@ -121,7 +159,7 @@ public partial class SettingsViewModel : ObservableObject
         if (profile == null) return;
         var count = _manager.EnableSettings(profile.SettingIds);
         StatusMessage = $"Applied profile '{profile.Name}': {count} settings enabled";
-        RefreshSettings();
+        _ = RefreshSettingsAsync();
     }
 
     [RelayCommand(CanExecute = nameof(CanClearCategoryFilter))]

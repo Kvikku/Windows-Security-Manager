@@ -29,7 +29,17 @@ public sealed partial class SettingsPage : Page
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         _viewModel.SearchText = sender.Text;
-        UpdateList();
+        // Debounced refresh handled by ViewModel; update list when settings change
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsViewModel.Settings))
+        {
+            UpdateList();
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
     }
 
     private void CategoryFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -54,7 +64,7 @@ public sealed partial class SettingsPage : Page
         {
             _viewModel.ApplyProfile(profile);
             UpdateList();
-            ShowStatus($"Applied profile '{profile.Name}'");
+            ShowStatus(_viewModel.StatusMessage, InfoBarSeverity.Success);
             ProfileCombo.SelectedItem = null;
         }
     }
@@ -63,14 +73,14 @@ public sealed partial class SettingsPage : Page
     {
         _viewModel.EnableAll();
         UpdateList();
-        ShowStatus(_viewModel.StatusMessage);
+        ShowStatus(_viewModel.StatusMessage, InfoBarSeverity.Success);
     }
 
     private void DisableAll_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.DisableAll();
         UpdateList();
-        ShowStatus(_viewModel.StatusMessage);
+        ShowStatus(_viewModel.StatusMessage, InfoBarSeverity.Success);
     }
 
     private void Enable_Click(object sender, RoutedEventArgs e)
@@ -79,7 +89,8 @@ public sealed partial class SettingsPage : Page
         {
             _viewModel.EnableSetting(id);
             UpdateList();
-            ShowStatus($"Enabled: {id}");
+            var succeeded = _viewModel.StatusMessage.StartsWith("Enabled:", StringComparison.Ordinal);
+            ShowStatus(_viewModel.StatusMessage, succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error);
         }
     }
 
@@ -89,7 +100,8 @@ public sealed partial class SettingsPage : Page
         {
             _viewModel.DisableSetting(id);
             UpdateList();
-            ShowStatus($"Disabled: {id}");
+            var succeeded = _viewModel.StatusMessage.StartsWith("Disabled:", StringComparison.Ordinal);
+            ShowStatus(_viewModel.StatusMessage, succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error);
         }
     }
 
@@ -98,9 +110,10 @@ public sealed partial class SettingsPage : Page
         SettingsList.ItemsSource = _viewModel.Settings;
     }
 
-    private void ShowStatus(string message)
+    private void ShowStatus(string message, InfoBarSeverity severity = InfoBarSeverity.Success)
     {
         StatusBar.Message = message;
+        StatusBar.Severity = severity;
         StatusBar.IsOpen = true;
     }
 }
