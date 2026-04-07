@@ -23,23 +23,20 @@ public sealed partial class SettingsPage : Page
 
         ProfileCombo.ItemsSource = _viewModel.ProfileOptions;
 
+        // Update list when ViewModel's Settings property changes (e.g., from debounced search)
+        _viewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.Settings))
+                UpdateList();
+        };
+
         UpdateList();
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         _viewModel.SearchText = sender.Text;
-        // Debounced refresh handled by ViewModel; update list when settings change
-        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SettingsViewModel.Settings))
-        {
-            UpdateList();
-            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        }
+        // Debounced refresh handled by ViewModel; list updates via PropertyChanged
     }
 
     private void CategoryFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -89,8 +86,7 @@ public sealed partial class SettingsPage : Page
         {
             _viewModel.EnableSetting(id);
             UpdateList();
-            var succeeded = _viewModel.StatusMessage.StartsWith("Enabled:", StringComparison.Ordinal);
-            ShowStatus(_viewModel.StatusMessage, succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error);
+            ShowStatus(_viewModel.StatusMessage, _viewModel.LastOperationSucceeded ? InfoBarSeverity.Success : InfoBarSeverity.Error);
         }
     }
 
@@ -100,8 +96,7 @@ public sealed partial class SettingsPage : Page
         {
             _viewModel.DisableSetting(id);
             UpdateList();
-            var succeeded = _viewModel.StatusMessage.StartsWith("Disabled:", StringComparison.Ordinal);
-            ShowStatus(_viewModel.StatusMessage, succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Error);
+            ShowStatus(_viewModel.StatusMessage, _viewModel.LastOperationSucceeded ? InfoBarSeverity.Success : InfoBarSeverity.Error);
         }
     }
 
