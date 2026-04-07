@@ -25,9 +25,9 @@ public sealed partial class ReportPage : Page
         _viewModel.SelectedCategory = CategoryFilter.SelectedItem is SecurityCategory cat ? cat : null;
     }
 
-    private void Generate_Click(object sender, RoutedEventArgs e)
+    private async void Generate_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.GenerateReport();
+        await _viewModel.GenerateReportAsync();
         var report = _viewModel.Report;
         if (report == null) return;
 

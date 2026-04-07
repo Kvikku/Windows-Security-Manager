@@ -57,7 +57,11 @@ public partial class App : Application
             AuditLogger = new AuditLogger(logPath);
             SettingsManager.SetAuditLogger(AuditLogger);
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        catch (UnauthorizedAccessException)
+        {
+            // Audit logging will be unavailable
+        }
+        catch (IOException)
         {
             // Audit logging will be unavailable
         }

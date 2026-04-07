@@ -34,10 +34,13 @@ public partial class ReportViewModel : ObservableObject
     private ExportFormat _selectedFormat = ExportFormat.Html;
 
     [RelayCommand]
-    public void GenerateReport()
+    public async Task GenerateReportAsync()
     {
-        Report = _manager.GenerateReport(SelectedCategory);
-        StatusMessage = $"Report generated: {Report.TotalSettings} settings, {Report.CompliancePercentage:F1}% compliance";
+        StatusMessage = "Generating report...";
+        var category = SelectedCategory;
+        var report = await Task.Run(() => _manager.GenerateReport(category));
+        Report = report;
+        StatusMessage = $"Report generated: {report.TotalSettings} settings, {report.CompliancePercentage:F1}% compliance";
     }
 
     [RelayCommand]
@@ -49,20 +52,29 @@ public partial class ReportViewModel : ObservableObject
             return;
         }
 
-        var exporter = new ReportExporter();
-        var extension = SelectedFormat switch
+        try
         {
-            ExportFormat.Json => "json",
-            ExportFormat.Csv => "csv",
-            ExportFormat.Html => "html",
-            _ => "txt"
-        };
+            var exporter = new ReportExporter();
+            var extension = SelectedFormat switch
+            {
+                ExportFormat.Json => "json",
+                ExportFormat.Csv => "csv",
+                ExportFormat.Html => "html",
+                _ => "txt"
+            };
 
-        var fileName = $"wsm-report-{DateTime.Now:yyyyMMdd-HHmmss}.{extension}";
-        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        var filePath = Path.Combine(desktopPath, fileName);
+            var fileName = $"wsm-report-{DateTime.Now:yyyyMMdd-HHmmss}.{extension}";
+            var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var filePath = Path.Combine(desktopPath, fileName);
+            var report = Report;
+            var format = SelectedFormat;
 
-        await Task.Run(() => exporter.ExportToFile(Report, SelectedFormat, filePath));
-        StatusMessage = $"Report exported to: {filePath}";
+            await Task.Run(() => exporter.ExportToFile(report, format, filePath));
+            StatusMessage = $"Report exported to: {filePath}";
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or DirectoryNotFoundException)
+        {
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
     }
 }

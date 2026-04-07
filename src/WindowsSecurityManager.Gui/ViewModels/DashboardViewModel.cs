@@ -39,6 +39,7 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     public void Refresh()
     {
+        // Generate a single report for all settings to avoid duplicate registry IO
         var report = _manager.GenerateReport();
         OverallCompliance = report.CompliancePercentage;
         TotalSettings = report.TotalSettings;
@@ -46,21 +47,22 @@ public partial class DashboardViewModel : ObservableObject
         DisabledCount = report.DisabledCount - report.NotConfiguredCount;
         NotConfiguredCount = report.NotConfiguredCount;
 
+        // Compute per-category aggregates from the same in-memory statuses
         var categoryItems = new List<CategoryComplianceItem>();
-        foreach (var category in Enum.GetValues<SecurityCategory>())
+        var grouped = report.Settings.GroupBy(s => s.Setting.Category);
+        foreach (var group in grouped)
         {
-            var catReport = _manager.GenerateReport(category);
-            if (catReport.TotalSettings > 0)
+            var catStatuses = group.ToList();
+            var catEnabled = catStatuses.Count(s => s.IsEnabled);
+            var catTotal = catStatuses.Count;
+            categoryItems.Add(new CategoryComplianceItem
             {
-                categoryItems.Add(new CategoryComplianceItem
-                {
-                    Category = category,
-                    DisplayName = FormatCategoryName(category),
-                    CompliancePercentage = catReport.CompliancePercentage,
-                    EnabledCount = catReport.EnabledCount,
-                    TotalCount = catReport.TotalSettings
-                });
-            }
+                Category = group.Key,
+                DisplayName = FormatCategoryName(group.Key),
+                CompliancePercentage = catTotal > 0 ? Math.Round((double)catEnabled / catTotal * 100, 1) : 0,
+                EnabledCount = catEnabled,
+                TotalCount = catTotal
+            });
         }
         Categories = categoryItems;
     }
