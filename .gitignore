@@ -46,6 +46,18 @@ bld/
 *.userosscache
 *.sln.docstates
 
+## Code coverage
+[Cc]overage*/
+*.coverage
+*.coveragexml
+*.opencover.xml
+
+## ReSharper/Rider user settings
+*.DotSettings.user
+
+## Publish profiles
+*.PublishProfiles/
+
 ## OS files
 .DS_Store
 Thumbs.db
