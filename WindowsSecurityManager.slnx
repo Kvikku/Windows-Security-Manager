@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/WindowsSecurityManager.Core/WindowsSecurityManager.Core.csproj" />
     <Project Path="src/WindowsSecurityManager/WindowsSecurityManager.csproj" />
+    <Project Path="src/WindowsSecurityManager.Gui/WindowsSecurityManager.Gui.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/WindowsSecurityManager.Tests/WindowsSecurityManager.Tests.csproj" />

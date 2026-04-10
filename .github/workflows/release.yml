@@ -36,23 +36,43 @@ jobs:
       - name: Run tests
         run: dotnet test tests/WindowsSecurityManager.Tests/WindowsSecurityManager.Tests.csproj --configuration Release --no-restore
 
-      - name: Publish self-contained executable
+      - name: Publish CLI executable
         run: >
           dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj
           --configuration Release
           --runtime win-x64
           --self-contained true
-          --output ./publish
+          --output ./publish/cli
 
-      - name: Upload build artifact
+      - name: Publish GUI executable
+        run: >
+          dotnet publish src/WindowsSecurityManager.Gui/WindowsSecurityManager.Gui.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output ./publish/gui
+
+      - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WindowsSecurityManager-win-x64
-          path: ./publish/WindowsSecurityManager.exe
+          name: WindowsSecurityManager-CLI-win-x64
+          path: ./publish/cli/WindowsSecurityManager.exe
+
+      - name: Upload GUI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WindowsSecurityManager-GUI-win-x64
+          path: ./publish/gui/
+
+      - name: Package GUI for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: Compress-Archive -Path ./publish/gui/* -DestinationPath ./publish/WindowsSecurityManager-GUI-win-x64.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ./publish/WindowsSecurityManager.exe
+          files: |
+            ./publish/cli/WindowsSecurityManager.exe
+            ./publish/WindowsSecurityManager-GUI-win-x64.zip
           generate_release_notes: true

@@ -9,7 +9,7 @@
 ![Usage](https://img.shields.io/badge/usage-no__public__license-red)
 ![Settings](https://img.shields.io/badge/security_settings-98-green)
 
-**A powerful CLI tool for managing Windows security hardening settings.**\
+**A powerful CLI and GUI tool for managing Windows security hardening settings.**\
 Enable, disable, audit, and report on Windows Defender, ASR rules, firewall, CIS benchmarks, and more — all from one place.
 
 [Getting Started](docs/getting-started.md) · [CLI Reference](docs/cli-reference.md) · [Download](https://github.com/Kvikku/Windows-Security-Manager/releases)
@@ -75,6 +75,19 @@ Enable, disable, audit, and report on Windows Defender, ASR rules, firewall, CIS
 
 </td>
 </tr>
+<tr>
+<td colspan="2">
+
+**🖥️ WinUI 3 Desktop GUI** *(NEW)*
+- Modern Fluent Design with Windows 11 look & feel
+- Dashboard with compliance gauges per category
+- Settings management with search, filters, and inline enable/disable
+- Report generation and export from the GUI
+- Backup/restore and audit log viewer
+- Unpackaged deployment — no MSIX required
+
+</td>
+</tr>
 </table>
 
 ### Supported Security Categories
@@ -94,9 +107,16 @@ Enable, disable, audit, and report on Windows Defender, ASR rules, firewall, CIS
 
 Download `WindowsSecurityManager.exe` from the [latest release](https://github.com/Kvikku/Windows-Security-Manager/releases) — no install or runtime needed.
 
+Two executables are available:
+- **`WindowsSecurityManager.exe`** — CLI + interactive terminal mode
+- **`WindowsSecurityManager.Gui.exe`** — WinUI 3 desktop application (Windows 10 2004+)
+
 ```bash
-# Launch interactive mode (recommended for first use)
+# Launch interactive terminal mode (recommended for first use)
 WindowsSecurityManager.exe
+
+# Launch the WinUI 3 desktop GUI
+WindowsSecurityManager.Gui.exe
 
 # Or use CLI commands directly
 WindowsSecurityManager.exe list
@@ -108,8 +128,9 @@ WindowsSecurityManager.exe enable --setting DEF-001
 
 | Requirement | Details |
 |---|---|
-| 💻 Operating System | Windows 10/11 or Windows Server 2016+ |
+| 💻 Operating System | Windows 10 (2004+) / Windows 11 or Windows Server 2016+ |
 | 🔑 Privileges | Administrator (for registry changes) |
+| 🖥️ GUI | Windows 10 version 2004 (build 19041) or later |
 
 > **For development:** [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
 
@@ -211,15 +232,25 @@ dotnet build
 # Run tests
 dotnet test
 
-# Run (development)
+# Run CLI (development)
 dotnet run --project src/WindowsSecurityManager -- --help
 
-# Publish as standalone executable
+# Run GUI (development, Windows only)
+dotnet run --project src/WindowsSecurityManager.Gui
+
+# Publish CLI as standalone executable
 dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj \
     --configuration Release \
     --runtime win-x64 \
     --self-contained true \
-    --output ./publish
+    --output ./publish/cli
+
+# Publish GUI
+dotnet publish src/WindowsSecurityManager.Gui/WindowsSecurityManager.Gui.csproj \
+    --configuration Release \
+    --runtime win-x64 \
+    --self-contained true \
+    --output ./publish/gui
 ```
 
 ## 📚 Documentation
@@ -239,15 +270,21 @@ dotnet publish src/WindowsSecurityManager/WindowsSecurityManager.csproj \
 ```
 ├── .github/workflows/
 │   ├── ci.yml                    # CI: restore, format check, build, test, coverage on push/PR
-│   └── release.yml               # CD: build & release executable on tags
+│   └── release.yml               # CD: build & release CLI + GUI executables on tags
 ├── docs/                         # 📚 Documentation and how-to guides
-├── src/WindowsSecurityManager/
-│   ├── Commands/                 # CLI command handlers
+├── src/WindowsSecurityManager.Core/
 │   ├── Definitions/              # Security setting definitions & profiles
 │   ├── Models/                   # Data models
-│   ├── Services/                 # Core services (registry, manager, exporter, backup, logger)
+│   └── Services/                 # Core services (registry, manager, exporter, backup, logger)
+├── src/WindowsSecurityManager/
+│   ├── Commands/                 # CLI command handlers
 │   ├── UI/                       # Interactive terminal menu (Spectre.Console)
-│   └── Program.cs                # Application entry point
+│   └── Program.cs                # CLI entry point
+├── src/WindowsSecurityManager.Gui/
+│   ├── ViewModels/               # MVVM ViewModels (CommunityToolkit.Mvvm)
+│   ├── Views/                    # WinUI 3 XAML pages
+│   ├── App.xaml                  # GUI application entry point
+│   └── MainWindow.xaml           # NavigationView shell
 ├── tests/WindowsSecurityManager.Tests/
 │   └── *.cs                      # Unit tests (xUnit + Moq)
 └── WindowsSecurityManager.slnx
@@ -271,14 +308,14 @@ Runs on every push and pull request targeting `main`. Acts as a quality gate bef
 
 ### Release (`release.yml`) — Tag Push & Manual Dispatch
 
-Builds and publishes the standalone executable.
+Builds and publishes the standalone executables.
 
 | Trigger | Behavior |
 |---|---|
-| **Tag push** (`v*`) | Builds, tests, and creates a GitHub Release with the `.exe` attached |
-| **Manual dispatch** | Builds on demand; artifact available from the workflow run |
+| **Tag push** (`v*`) | Builds, tests, and creates a GitHub Release with CLI `.exe` attached |
+| **Manual dispatch** | Builds on demand; CLI and GUI artifacts available from the workflow run |
 
-**Release pipeline steps:** restore → test → publish (single-file, self-contained, win-x64) → upload artifact → create GitHub Release.
+**Release pipeline steps:** restore → test → publish CLI (single-file, self-contained, win-x64) → publish GUI (self-contained, win-x64) → upload artifacts → create GitHub Release.
 
 Both workflows use **NuGet package caching** (`actions/cache`) to speed up dependency restoration.
 
