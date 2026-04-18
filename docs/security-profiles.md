@@ -2,6 +2,8 @@
 
 Security profiles are pre-built presets that enable a curated set of security settings in one action. They let you quickly apply a consistent security posture without selecting individual settings.
 
+> 💡 **Before applying any profile**, review the [Security Setting Consequences](security-setting-consequences.md) page for the per-setting compatibility impact, and follow the **backup → dry-run → apply → rollback** workflow described below.
+
 ## Available Profiles
 
 ### CIS Level 1
@@ -19,6 +21,8 @@ Covers Defender basics, firewall, core CIS settings, and account policies. This 
 | Network Security | Disable LLMNR, NetBIOS, WPAD; enable TLS 1.2 |
 
 **Best for:** General-purpose workstations, office environments, standard servers.
+
+**Likely side effects:** Mostly 🟢 Low impact. The strict NTLMv2 setting (CIS-003) and SMB signing requirements (CIS-009 – CIS-012) can break authentication / file sharing with very old systems — see [Security Setting Consequences](security-setting-consequences.md#-cis-benchmark-cis-xxx).
 
 ---
 
@@ -41,6 +45,17 @@ This profile activates all 98 managed settings across every category, including 
 
 **Best for:** High-security servers, sensitive workstations, compliance-critical systems.
 
+**Likely side effects:** Includes every 🔴 High-impact setting in this tool, notably:
+
+- **ASR-008** (Block PSExec/WMI) — breaks many remote-admin and deployment workflows.
+- **ASR-014** (Block low-prevalence executables) — breaks freshly built or internal binaries.
+- **CIS-003** (Refuse LM/NTLM) — breaks legacy authentication.
+- **CIS-022** (Disable Windows Script Host) — breaks `.vbs`/`.js`/`.wsf` scripts and many legacy installers/logon scripts.
+- **ACCT-005** (Crash On Audit Fail) — bluescreens the system if security events cannot be written.
+- **All TLS 1.0/1.1 disables** — breaks legacy clients and embedded devices that cannot negotiate TLS 1.2+.
+
+Read the full per-setting impact in [Security Setting Consequences](security-setting-consequences.md) before applying this profile.
+
 ---
 
 ### Developer Workstation
@@ -58,6 +73,8 @@ Enables core protections while avoiding settings that may interfere with develop
 | Network Security | Insecure resolution disabled; TLS 1.2 enforced |
 
 **Best for:** Developer laptops, CI/CD build machines, test environments.
+
+**Likely side effects:** Mostly 🟢 Low impact. Avoids the settings most likely to interfere with developer workflows (aggressive cloud blocking of unsigned dev builds, strict NTLM, strict SMB signing, low-prevalence executable blocking). Per-setting notes in [Security Setting Consequences](security-setting-consequences.md).
 
 ---
 

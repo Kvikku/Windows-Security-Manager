@@ -81,6 +81,8 @@ WindowsSecurityManager.exe profile --apply "CIS Level 1"
 
 ### Recommended First Workflow
 
+> ⚠️ **Before enabling any setting**, review the [Security Setting Consequences](security-setting-consequences.md) page so you know the compatibility impact of what you're about to apply. Always **backup → dry-run → apply → rollback if needed**.
+
 1. **Backup** your current registry state:
    ```bash
    WindowsSecurityManager.exe backup --output before-changes.json
@@ -106,5 +108,6 @@ WindowsSecurityManager.exe profile --apply "CIS Level 1"
 
 - [CLI Reference](cli-reference.md) — Full command documentation
 - [Security Profiles](security-profiles.md) — Learn about the built-in profiles
+- [Security Setting Consequences](security-setting-consequences.md) — Impact and side effects of each setting
 - [Backup & Restore](backup-and-restore.md) — Safely manage changes
 - [Extending Settings](extending-settings.md) — Add your own security settings

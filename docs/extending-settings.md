@@ -132,6 +132,12 @@ Follow these conventions when adding settings:
 - **Descriptive names:** Keep names concise but descriptive.
 - **Meaningful descriptions:** Include what the setting protects against and any side effects.
 - **One file per category:** Group related settings in a single provider class under `Definitions/`.
+- **Document consequences (required):** Every new setting **must** be added to [`docs/security-setting-consequences.md`](security-setting-consequences.md) in the same pull request. Include:
+  - The setting ID, name, and the category table it belongs to.
+  - An impact label (🟢 Low / 🟡 Medium / 🔴 High) reflecting realistic compatibility risk.
+  - A short "Potential Consequences" note describing what may break, what UX changes, or what compatibility concerns to watch for. If the only effect is increased log volume, telemetry, or removal of a deprecated protocol, say so explicitly.
+
+  PRs that add or change a setting without a corresponding consequences entry are considered incomplete.
 
 ## Testing
 
