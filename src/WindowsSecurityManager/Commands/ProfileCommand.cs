@@ -99,9 +99,10 @@ public static class ProfileCommand
                     .ToList();
                 int high = settings.Count(s => s.Impact == ImpactLevel.High);
                 int medium = settings.Count(s => s.Impact == ImpactLevel.Medium);
+                int low = settings.Count(s => s.Impact == ImpactLevel.Low);
                 if (high > 0 || medium > 0)
                 {
-                    Console.WriteLine($"Impact: 🔴 {high} High | 🟡 {medium} Medium settings were enabled.");
+                    Console.WriteLine($"Impact: 🔴 {high} High | 🟡 {medium} Medium | 🟢 {low} Low settings were enabled.");
                     Console.WriteLine("If something stops working, restore from your most recent backup. See docs/security-setting-consequences.md.");
                 }
             }

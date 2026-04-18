@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using WindowsSecurityManager.Models;
 
 namespace WindowsSecurityManager.Definitions;
@@ -13,7 +14,8 @@ public static class SettingConsequencesCatalog
     /// Map of setting ID → (impact level, short consequences note).
     /// </summary>
     public static readonly IReadOnlyDictionary<string, (ImpactLevel Impact, string Consequences)> Entries =
-        new Dictionary<string, (ImpactLevel, string)>(StringComparer.OrdinalIgnoreCase)
+        new ReadOnlyDictionary<string, (ImpactLevel Impact, string Consequences)>(
+            new Dictionary<string, (ImpactLevel, string)>(StringComparer.OrdinalIgnoreCase)
         {
             // --- Windows Defender ---
             ["DEF-001"] = (ImpactLevel.Low,    "Prevents users (and malware) from disabling Defender. May conflict with third-party AV that expects to disable Defender — switch via the third-party installer instead."),
@@ -126,12 +128,12 @@ public static class SettingConsequencesCatalog
             ["NET-013"] = (ImpactLevel.Medium, "Some legacy client/server software, embedded devices, and old .NET Framework apps still negotiate TLS 1.0 only."),
             ["NET-014"] = (ImpactLevel.Medium, "Some legacy client/server software, embedded devices, and old .NET Framework apps still negotiate TLS 1.1 only."),
             ["NET-015"] = (ImpactLevel.Medium, "Some legacy client/server software, embedded devices, and old .NET Framework apps still negotiate TLS 1.1 only."),
-        };
+        });
 
     /// <summary>
     /// Returns the catalog entry for a setting ID, or <c>(Unknown, "")</c> if missing.
     /// </summary>
-    public static (ImpactLevel Impact, string Consequences) Get(string settingId)
+    public static (ImpactLevel Impact, string Consequences) Get(string? settingId)
     {
         if (settingId is not null && Entries.TryGetValue(settingId, out var entry))
             return entry;
@@ -148,13 +150,16 @@ public static class SettingConsequencesCatalog
         if (settings is null) return;
         foreach (var setting in settings)
         {
-            if (setting.Impact != ImpactLevel.Unknown && !string.IsNullOrEmpty(setting.Consequences))
+            if (setting is null)
+                continue;
+
+            if (setting.Impact != ImpactLevel.Unknown && !string.IsNullOrWhiteSpace(setting.Consequences))
                 continue;
 
             var (impact, consequences) = Get(setting.Id);
             if (setting.Impact == ImpactLevel.Unknown)
                 setting.Impact = impact;
-            if (string.IsNullOrEmpty(setting.Consequences))
+            if (string.IsNullOrWhiteSpace(setting.Consequences))
                 setting.Consequences = consequences;
         }
     }

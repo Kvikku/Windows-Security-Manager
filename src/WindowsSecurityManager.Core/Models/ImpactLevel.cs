@@ -8,8 +8,8 @@ namespace WindowsSecurityManager.Models;
 public enum ImpactLevel
 {
     /// <summary>
-    /// Unknown / not classified. Treated like Low for display purposes but indicates
-    /// the setting has not been categorised yet.
+    /// Unknown / not classified. Displayed as <c>Unknown</c> and indicates the
+    /// setting has not been categorised yet.
     /// </summary>
     Unknown = 0,
 
