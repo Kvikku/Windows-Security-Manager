@@ -21,13 +21,13 @@ public partial class BackupViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private SecurityCategory? _selectedCategory;
+    public partial SecurityCategory? SelectedCategory { get; set; }
 
     [ObservableProperty]
-    private List<SecurityCategory> _categoryOptions = [];
+    public partial List<SecurityCategory> CategoryOptions { get; set; } = [];
 
     [ObservableProperty]
-    private string _statusMessage = "";
+    public partial string StatusMessage { get; set; } = "";
 
     [RelayCommand]
     public async Task CreateBackupAsync()

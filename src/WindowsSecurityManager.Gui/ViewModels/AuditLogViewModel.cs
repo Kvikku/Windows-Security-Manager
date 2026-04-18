@@ -16,10 +16,10 @@ public partial class AuditLogViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private List<AuditLogEntry> _entries = [];
+    public partial List<AuditLogEntry> Entries { get; set; } = [];
 
     [ObservableProperty]
-    private string _statusMessage = "";
+    public partial string StatusMessage { get; set; } = "";
 
     [RelayCommand]
     public void Refresh()
