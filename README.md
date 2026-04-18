@@ -6,7 +6,7 @@
 [![Build and Release](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/release.yml/badge.svg)](https://github.com/Kvikku/Windows-Security-Manager/actions/workflows/release.yml)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white)
-![Usage](https://img.shields.io/badge/usage-no__public__license-red)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Settings](https://img.shields.io/badge/security_settings-98-green)
 
 **A powerful CLI and GUI tool for managing Windows security hardening settings.**\
@@ -332,4 +332,4 @@ Both workflows use **NuGet package caching** (`actions/cache`) to speed up depen
 
 ## 📄 License
 
-This project is provided as-is for security hardening purposes. No public license is included — see the repository for usage terms.
+This project is licensed under the [MIT License](LICENSE).

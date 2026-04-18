@@ -92,7 +92,11 @@ public class InteractiveMenu
             .Color(Color.Cyan1);
 
         var subtitle = new Markup("[bold cyan]Windows Security Manager[/]").Centered();
-        var version = new Markup("[dim]v2.0.0 — Security Hardening Made Simple[/]").Centered();
+        var appVersion = System.Reflection.Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion.Split('+')[0] ?? "1.0.0";
+        var version = new Markup($"[dim]v{appVersion} — Security Hardening Made Simple[/]").Centered();
 
         var panel = new Panel(
             new Rows(
