@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>WindowsSecurityManager</AssemblyName>
+    <Version>1.0.0</Version>
 
     <!-- Publishing options for self-contained single-file executable -->
     <PublishSingleFile>true</PublishSingleFile>
