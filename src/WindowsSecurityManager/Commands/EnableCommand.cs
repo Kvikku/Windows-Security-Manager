@@ -53,12 +53,15 @@ public static class EnableCommand
                 foreach (var change in changes)
                 {
                     string current = change.IsCurrentlyConfigured ? change.CurrentValue?.ToString() ?? "N/A" : "NOT SET";
-                    Console.WriteLine($"  [{change.Setting.Id}] {change.Setting.Name}");
+                    Console.WriteLine($"  [{change.Setting.Id}] {change.Setting.Name}  ({ImpactFormatter.Format(change.Setting.Impact)})");
                     Console.WriteLine($"    {change.Setting.RegistryHive}\\{change.Setting.RegistryPath}\\{change.Setting.ValueName}");
                     Console.WriteLine($"    Current: {current} → New: {change.NewValue}");
+                    if (!string.IsNullOrWhiteSpace(change.Setting.Consequences))
+                        Console.WriteLine($"    ⚠ {change.Setting.Consequences}");
                     Console.WriteLine();
                 }
                 Console.WriteLine($"Total: {changes.Count} settings would be changed.");
+                PrintImpactSummary(changes.Select(c => c.Setting));
             }
             else
             {
@@ -84,5 +87,23 @@ public static class EnableCommand
         }, settingOption, categoryOption, allOption, dryRunOption);
 
         return command;
+    }
+
+    private static void PrintImpactSummary(IEnumerable<SecuritySetting> settings)
+    {
+        var list = settings.ToList();
+        int high = list.Count(s => s.Impact == ImpactLevel.High);
+        int medium = list.Count(s => s.Impact == ImpactLevel.Medium);
+        int low = list.Count(s => s.Impact == ImpactLevel.Low);
+
+        if (high == 0 && medium == 0 && low == 0)
+            return;
+
+        Console.WriteLine();
+        Console.WriteLine($"Impact summary: 🔴 {high} High | 🟡 {medium} Medium | 🟢 {low} Low");
+        if (high > 0 || medium > 0)
+        {
+            Console.WriteLine("⚠  Review the consequences above before applying. See docs/security-setting-consequences.md for details.");
+        }
     }
 }

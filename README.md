@@ -221,7 +221,7 @@ WindowsSecurityManager.exe restore before-changes.json
 | **Maximum Security** | Enables all 98 settings across every category | High-security servers, sensitive systems |
 | **Developer Workstation** | Core protections without breaking dev tools | Developer laptops, CI/CD machines |
 
-> See [Security Profiles documentation](docs/security-profiles.md) for detailed breakdowns of each profile.
+> See [Security Profiles documentation](docs/security-profiles.md) for detailed breakdowns of each profile, and [Security Setting Consequences](docs/security-setting-consequences.md) for the per-setting compatibility impact.
 
 ## 🔨 Build from Source
 
@@ -260,6 +260,7 @@ dotnet publish src/WindowsSecurityManager.Gui/WindowsSecurityManager.Gui.csproj 
 | [Getting Started](docs/getting-started.md) | Installation, first steps, and recommended workflows |
 | [CLI Reference](docs/cli-reference.md) | Complete command reference with all options and examples |
 | [Security Profiles](docs/security-profiles.md) | Detailed guide to built-in security profiles |
+| [Security Setting Consequences](docs/security-setting-consequences.md) | Per-setting impact and compatibility notes (read before enabling) |
 | [Backup & Restore](docs/backup-and-restore.md) | How to safely back up and restore security settings |
 | [CI/CD Pipeline](docs/ci-cd.md) | How the build and release pipeline works |
 | [Extending Settings](docs/extending-settings.md) | How to add your own custom security settings |

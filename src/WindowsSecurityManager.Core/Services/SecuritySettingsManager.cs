@@ -1,3 +1,4 @@
+using WindowsSecurityManager.Definitions;
 using WindowsSecurityManager.Models;
 
 namespace WindowsSecurityManager.Services;
@@ -17,6 +18,10 @@ public class SecuritySettingsManager
         _settings = (providers ?? throw new ArgumentNullException(nameof(providers)))
             .SelectMany(p => p.GetSettings())
             .ToList();
+
+        // Enrich settings with impact + consequences metadata so the UI can display
+        // compatibility guidance alongside each setting at runtime.
+        SettingConsequencesCatalog.Enrich(_settings);
     }
 
     /// <summary>

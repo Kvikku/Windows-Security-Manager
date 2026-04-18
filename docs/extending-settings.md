@@ -49,6 +49,8 @@ public class MyCustomSettings : ISecuritySettingProvider
 | `EnabledValue` | `object` | The value that represents the hardened/enabled state. |
 | `DisabledValue` | `object` | The value that represents the unhardened/disabled state. |
 | `RecommendedValue` | `object` | The value recommended by security benchmarks (usually matches `EnabledValue`). |
+| `Impact` | `ImpactLevel` | Optional. Compatibility risk label (`Low` / `Medium` / `High`). If left as `Unknown`, the value is filled in from `SettingConsequencesCatalog` at startup. Surfaced in the CLI and Interactive Menu. |
+| `Consequences` | `string` | Optional. Short note describing what may break or change when this setting is enabled. If empty, the value is filled in from `SettingConsequencesCatalog` at startup. Surfaced in the CLI and Interactive Menu. |
 
 ### Available Categories
 
@@ -132,6 +134,12 @@ Follow these conventions when adding settings:
 - **Descriptive names:** Keep names concise but descriptive.
 - **Meaningful descriptions:** Include what the setting protects against and any side effects.
 - **One file per category:** Group related settings in a single provider class under `Definitions/`.
+- **Document consequences (required):** Every new setting **must** be added to [`docs/security-setting-consequences.md`](security-setting-consequences.md) **and** to [`SettingConsequencesCatalog`](../src/WindowsSecurityManager.Core/Definitions/SettingConsequencesCatalog.cs) in the same pull request. The catalog drives the in-app impact label and consequences note shown in the CLI (`list`, `detail`, `enable --dry-run`, `profile --apply --dry-run`) and in the Interactive Menu. Each entry must include:
+  - The setting ID, name, and the category table it belongs to (in the docs page).
+  - An impact label (🟢 Low / 🟡 Medium / 🔴 High) — `ImpactLevel.Low`, `ImpactLevel.Medium`, or `ImpactLevel.High` in the catalog.
+  - A short "Potential Consequences" note describing what may break, what UX changes, or what compatibility concerns to watch for. If the only effect is increased log volume, telemetry, or removal of a deprecated protocol, say so explicitly.
+
+  Alternatively, you can populate `Impact` and `Consequences` directly on the `SecuritySetting` returned by your provider — explicit values always win over the catalog. A unit test (`SettingConsequencesCatalog_CoversEveryBuiltInSetting`) enforces that every built-in setting has an impact and consequences note. PRs that add or change a setting without these are considered incomplete.
 
 ## Testing
 

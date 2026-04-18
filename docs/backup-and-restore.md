@@ -2,6 +2,8 @@
 
 Windows Security Manager can back up the current registry state for all managed settings and restore them later. This lets you safely experiment with security configurations and roll back if something breaks.
 
+> 💡 **Always back up before making changes.** Pair backups with `--dry-run` previews and check [Security Setting Consequences](security-setting-consequences.md) so you know what each change may break before applying it.
+
 ## How It Works
 
 - **Backup** reads the current value (or absence of a value) for every managed registry key and saves it to a JSON file.

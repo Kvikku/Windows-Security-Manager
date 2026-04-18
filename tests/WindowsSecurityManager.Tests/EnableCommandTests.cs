@@ -111,4 +111,51 @@ public class EnableCommandTests : IDisposable
         Assert.Contains("TEST-001", output);
         Assert.Contains("Total: 1 settings would be changed.", output);
     }
+
+    [Fact]
+    public async Task Enable_DryRun_ShowsImpactLabelAndConsequences()
+    {
+        // Build a manager whose setting has an explicit impact + consequences note
+        // so we can assert the dry-run output surfaces them.
+        var mockRegistry = new Mock<IRegistryService>();
+        var manager = new SecuritySettingsManager(mockRegistry.Object, new[] { new ImpactTaggedProvider() });
+        var cmd = EnableCommand.Create(manager);
+
+        await cmd.InvokeAsync(new[] { "--setting", "IMPACT-001", "--dry-run" });
+
+        var output = _context.GetOutput();
+        Assert.Contains("DRY RUN", output);
+        Assert.Contains("IMPACT-001", output);
+        // Per-change impact label
+        Assert.Contains("🔴 High", output);
+        // Per-change consequences note (prefixed with the warning marker)
+        Assert.Contains("⚠ Will break things", output);
+        // Trailing impact summary
+        Assert.Contains("Impact summary:", output);
+        Assert.Contains("1 High", output);
+        Assert.Contains("Review the consequences above", output);
+    }
+
+    private sealed class ImpactTaggedProvider : ISecuritySettingProvider
+    {
+        public IEnumerable<SecuritySetting> GetSettings()
+        {
+            yield return new SecuritySetting
+            {
+                Id = "IMPACT-001",
+                Name = "Impact Tagged Setting",
+                Description = "Used by tests to assert impact/consequences output.",
+                Category = SecurityCategory.WindowsDefender,
+                RegistryHive = "HKLM",
+                RegistryPath = @"SOFTWARE\Test",
+                ValueName = "ImpactValue",
+                ValueType = SettingValueType.DWord,
+                EnabledValue = 1,
+                DisabledValue = 0,
+                RecommendedValue = 1,
+                Impact = ImpactLevel.High,
+                Consequences = "Will break things in tests."
+            };
+        }
+    }
 }
