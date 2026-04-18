@@ -1,3 +1,4 @@
+using System.Reflection;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using WindowsSecurityManager.Definitions;
@@ -92,9 +93,9 @@ public class InteractiveMenu
             .Color(Color.Cyan1);
 
         var subtitle = new Markup("[bold cyan]Windows Security Manager[/]").Centered();
-        var appVersion = System.Reflection.Assembly
+        var appVersion = Assembly
             .GetExecutingAssembly()
-            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion.Split('+')[0] ?? "1.0.0";
         var version = new Markup($"[dim]v{appVersion} — Security Hardening Made Simple[/]").Centered();
 
