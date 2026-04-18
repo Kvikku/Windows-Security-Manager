@@ -143,4 +143,54 @@ public class SettingDefinitionTests
         Assert.All(allSettings, s =>
             Assert.NotEqual(s.EnabledValue, s.DisabledValue));
     }
+
+    [Fact]
+    public void SettingConsequencesCatalog_CoversEveryBuiltInSetting()
+    {
+        var allSettings = new List<SecuritySetting>();
+        allSettings.AddRange(new DefenderSettings().GetSettings());
+        allSettings.AddRange(new AsrSettings().GetSettings());
+        allSettings.AddRange(new FirewallSettings().GetSettings());
+        allSettings.AddRange(new CisBenchmarkSettings().GetSettings());
+        allSettings.AddRange(new AccountPolicySettings().GetSettings());
+        allSettings.AddRange(new NetworkSecuritySettings().GetSettings());
+
+        SettingConsequencesCatalog.Enrich(allSettings);
+
+        Assert.All(allSettings, s =>
+        {
+            Assert.True(s.Impact != ImpactLevel.Unknown,
+                $"Setting '{s.Id}' is missing an impact label in SettingConsequencesCatalog. " +
+                "See docs/extending-settings.md.");
+            Assert.False(string.IsNullOrWhiteSpace(s.Consequences),
+                $"Setting '{s.Id}' is missing a consequences note in SettingConsequencesCatalog. " +
+                "See docs/extending-settings.md.");
+        });
+    }
+
+    [Fact]
+    public void SettingConsequencesCatalog_DoesNotOverrideExplicitImpact()
+    {
+        var setting = new SecuritySetting
+        {
+            Id = "DEF-001",
+            Name = "Test",
+            Description = "Test",
+            Category = SecurityCategory.WindowsDefender,
+            RegistryHive = "HKLM",
+            RegistryPath = "Test",
+            ValueName = "Test",
+            ValueType = SettingValueType.DWord,
+            EnabledValue = 1,
+            DisabledValue = 0,
+            RecommendedValue = 1,
+            Impact = ImpactLevel.High,
+            Consequences = "explicit override"
+        };
+
+        SettingConsequencesCatalog.Enrich(new[] { setting });
+
+        Assert.Equal(ImpactLevel.High, setting.Impact);
+        Assert.Equal("explicit override", setting.Consequences);
+    }
 }

@@ -4,6 +4,8 @@ Hardening Windows almost always involves trade-offs. A setting that blocks an at
 
 > **⚠️ Read before enabling.** None of the settings in this tool are destructive on their own, but combinations (especially via the `Maximum Security` profile) can break business-critical workflows. Always follow the [Before Enabling](#before-enabling) workflow.
 
+> 💡 **In-app visibility.** The same impact label and consequences note for every setting on this page is also shown inside the running app — in the `list` / `detail` / `enable --dry-run` / `profile --apply --dry-run` CLI commands and in the Interactive Menu (List, Setting Detail, Enable, and Security Profiles views). You don't need to keep this page open while using the tool.
+
 ## Before Enabling
 
 Apply the same workflow for any individual setting, category, or profile change:

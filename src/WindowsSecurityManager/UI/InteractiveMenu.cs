@@ -1,4 +1,5 @@
 using Spectre.Console;
+using Spectre.Console.Rendering;
 using WindowsSecurityManager.Definitions;
 using WindowsSecurityManager.Models;
 using WindowsSecurityManager.Services;
@@ -243,6 +244,7 @@ public class InteractiveMenu
                 .Title($"[bold yellow]{group.Key}[/] [dim]({group.Count()} settings)[/]")
                 .AddColumn(new TableColumn("[bold]ID[/]").Width(10))
                 .AddColumn(new TableColumn("[bold]Name[/]").Width(45))
+                .AddColumn(new TableColumn("[bold]Impact[/]").Centered().Width(10))
                 .AddColumn(new TableColumn("[bold]Type[/]").Centered().Width(8))
                 .AddColumn(new TableColumn("[bold]Enable → Disable[/]").Centered().Width(18));
 
@@ -251,6 +253,7 @@ public class InteractiveMenu
                 table.AddRow(
                     $"[cyan]{s.Id}[/]",
                     Markup.Escape(s.Name),
+                    FormatImpactMarkup(s.Impact),
                     $"[dim]{s.ValueType}[/]",
                     $"[green]{s.EnabledValue}[/] → [red]{s.DisabledValue}[/]"
                 );
@@ -424,14 +427,21 @@ public class InteractiveMenu
             var setting = PromptSetting();
             if (setting == null) return;
 
-            if (!ConfirmAction($"[yellow]Enable '{setting.Name}'?[/]"))
+            string impactInfo = setting.Impact == ImpactLevel.Unknown
+                ? string.Empty
+                : $" — Impact: {FormatImpactMarkup(setting.Impact)}";
+            if (!string.IsNullOrWhiteSpace(setting.Consequences))
+            {
+                AnsiConsole.MarkupLine($"[yellow]⚠  {Markup.Escape(setting.Consequences)}[/]");
+            }
+            if (!ConfirmAction($"[yellow]Enable '{Markup.Escape(setting.Name)}'?[/]{impactInfo}"))
                 return;
 
             bool success = _manager.EnableSetting(setting.Id);
             if (success)
-                AnsiConsole.MarkupLine($"[green]✓ '{setting.Name}' enabled successfully.[/]");
+                AnsiConsole.MarkupLine($"[green]✓ '{Markup.Escape(setting.Name)}' enabled successfully.[/]");
             else
-                AnsiConsole.MarkupLine($"[red]✗ Failed to enable '{setting.Name}'.[/]");
+                AnsiConsole.MarkupLine($"[red]✗ Failed to enable '{Markup.Escape(setting.Name)}'.[/]");
 
             ShowAutoRefreshSingle(setting);
         }
@@ -627,11 +637,20 @@ public class InteractiveMenu
 
         var status = _manager.GetSettingStatus(setting);
 
-        var panel = new Panel(new Rows(
+        var rows = new List<IRenderable>
+        {
             new Markup($"[bold cyan]ID:[/]            {Markup.Escape(setting.Id)}"),
             new Markup($"[bold cyan]Name:[/]          {Markup.Escape(setting.Name)}"),
             new Markup($"[bold cyan]Description:[/]   {Markup.Escape(setting.Description)}"),
             new Markup($"[bold cyan]Category:[/]      {setting.Category}"),
+            new Markup($"[bold cyan]Impact:[/]        {FormatImpactMarkup(setting.Impact)}"),
+        };
+        if (!string.IsNullOrWhiteSpace(setting.Consequences))
+        {
+            rows.Add(new Markup($"[bold cyan]Consequences:[/] [yellow]{Markup.Escape(setting.Consequences)}[/]"));
+        }
+        rows.AddRange(new IRenderable[]
+        {
             new Text(""),
             new Markup("[bold yellow]Registry:[/]"),
             new Markup($"  [dim]Hive:[/]         {Markup.Escape(setting.RegistryHive)}"),
@@ -649,7 +668,9 @@ public class InteractiveMenu
             new Markup($"  [dim]Current Value:[/]  {Markup.Escape(status.CurrentValue?.ToString() ?? "N/A (not configured)")}"),
             new Markup($"  [dim]Is Configured:[/]  {status.IsConfigured}"),
             new Markup($"  [dim]Matches Recommended:[/] {status.MatchesRecommended}")
-        ))
+        });
+
+        var panel = new Panel(new Rows(rows))
         {
             Border = BoxBorder.Rounded,
             BorderStyle = new Style(Color.Cyan1),
@@ -659,6 +680,17 @@ public class InteractiveMenu
 
         AnsiConsole.Write(panel);
     }
+
+    /// <summary>
+    /// Returns a Spectre.Console-friendly markup string for an <see cref="ImpactLevel"/>.
+    /// </summary>
+    private static string FormatImpactMarkup(ImpactLevel level) => level switch
+    {
+        ImpactLevel.Low => "[green]🟢 Low[/]",
+        ImpactLevel.Medium => "[yellow]🟡 Medium[/]",
+        ImpactLevel.High => "[red]🔴 High[/]",
+        _ => "[grey]⚪ Unknown[/]"
+    };
 
     /// <summary>
     /// Security profiles view — list and apply presets.
@@ -688,10 +720,22 @@ public class InteractiveMenu
         var profileName = choice.Split(" (")[0];
         var profile = profiles.First(p => p.Name == profileName);
 
-        // Show profile details
+        // Show profile details (with impact summary)
+        var profileSettings = _manager.GetSettings()
+            .Where(s => profile.SettingIds.Contains(s.Id, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        int profileHigh = profileSettings.Count(s => s.Impact == ImpactLevel.High);
+        int profileMedium = profileSettings.Count(s => s.Impact == ImpactLevel.Medium);
+        int profileLow = profileSettings.Count(s => s.Impact == ImpactLevel.Low);
+
         AnsiConsole.MarkupLine($"[bold cyan]{Markup.Escape(profile.Name)}[/]");
         AnsiConsole.MarkupLine($"[dim]{Markup.Escape(profile.Description)}[/]");
         AnsiConsole.MarkupLine($"[dim]Settings: {profile.SettingIds.Count}[/]");
+        AnsiConsole.MarkupLine($"Impact: [red]🔴 {profileHigh} High[/] | [yellow]🟡 {profileMedium} Medium[/] | [green]🟢 {profileLow} Low[/]");
+        if (profileHigh > 0 || profileMedium > 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]⚠  Contains Medium/High-impact settings — preview with dry-run and back up first.[/]");
+        }
         AnsiConsole.WriteLine();
 
         var action = AnsiConsole.Prompt(
@@ -713,9 +757,10 @@ public class InteractiveMenu
                 .BorderColor(Color.Grey)
                 .Title($"[bold yellow]Dry Run — {Markup.Escape(profile.Name)}[/]")
                 .AddColumn(new TableColumn("[bold]ID[/]").Width(10))
-                .AddColumn(new TableColumn("[bold]Name[/]").Width(40))
-                .AddColumn(new TableColumn("[bold]Current[/]").Centered().Width(10))
-                .AddColumn(new TableColumn("[bold]→ New[/]").Centered().Width(10));
+                .AddColumn(new TableColumn("[bold]Name[/]").Width(34))
+                .AddColumn(new TableColumn("[bold]Impact[/]").Centered().Width(10))
+                .AddColumn(new TableColumn("[bold]Current[/]").Centered().Width(9))
+                .AddColumn(new TableColumn("[bold]→ New[/]").Centered().Width(9));
 
             foreach (var change in changes)
             {
@@ -723,20 +768,42 @@ public class InteractiveMenu
                 table.AddRow(
                     $"[cyan]{change.Setting.Id}[/]",
                     Markup.Escape(change.Setting.Name),
+                    FormatImpactMarkup(change.Setting.Impact),
                     current,
                     $"[green]{change.NewValue}[/]"
                 );
             }
 
             AnsiConsole.Write(table);
+
+            // Surface High/Medium-impact consequences inline so the user sees side
+            // effects before they choose to apply.
+            var risky = changes
+                .Where(c => c.Setting.Impact == ImpactLevel.High || c.Setting.Impact == ImpactLevel.Medium)
+                .Where(c => !string.IsNullOrWhiteSpace(c.Setting.Consequences))
+                .ToList();
+            if (risky.Count > 0)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[bold yellow]⚠  Notable consequences:[/]");
+                foreach (var c in risky)
+                {
+                    AnsiConsole.MarkupLine($"  {FormatImpactMarkup(c.Setting.Impact)} [cyan]{c.Setting.Id}[/] — [yellow]{Markup.Escape(c.Setting.Consequences)}[/]");
+                }
+            }
         }
         else
         {
-            if (!ConfirmAction($"[yellow]Apply profile '{Markup.Escape(profile.Name)}'? This will enable {profile.SettingIds.Count} settings.[/]"))
+            string confirmMsg = $"[yellow]Apply profile '{Markup.Escape(profile.Name)}'? This will enable {profile.SettingIds.Count} settings ([red]🔴 {profileHigh} High[/], [yellow]🟡 {profileMedium} Medium[/], [green]🟢 {profileLow} Low[/] impact).[/]";
+            if (!ConfirmAction(confirmMsg))
                 return;
 
             int count = _manager.EnableSettings(profile.SettingIds);
             AnsiConsole.MarkupLine($"[green]✓ Applied '{Markup.Escape(profile.Name)}': enabled {count} settings.[/]");
+            if (profileHigh > 0 || profileMedium > 0)
+            {
+                AnsiConsole.MarkupLine("[dim]If something stops working, restore from your most recent backup. See docs/security-setting-consequences.md.[/]");
+            }
             ShowAutoRefresh();
         }
     }

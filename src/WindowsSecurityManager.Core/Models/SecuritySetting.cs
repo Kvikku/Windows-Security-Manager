@@ -59,4 +59,18 @@ public class SecuritySetting
     /// The recommended value for this setting (typically same as EnabledValue).
     /// </summary>
     public required object RecommendedValue { get; init; }
+
+    /// <summary>
+    /// Compatibility / usability impact of enabling this setting.
+    /// Defaults to <see cref="ImpactLevel.Unknown"/>; either set explicitly on the
+    /// definition or filled in centrally from <c>SettingConsequencesCatalog</c>.
+    /// </summary>
+    public ImpactLevel Impact { get; set; } = ImpactLevel.Unknown;
+
+    /// <summary>
+    /// Short human-readable note describing what may break or change when this
+    /// setting is enabled (compatibility impact, UX changes, log volume, etc.).
+    /// Mirrors the per-setting note in <c>docs/security-setting-consequences.md</c>.
+    /// </summary>
+    public string Consequences { get; set; } = string.Empty;
 }

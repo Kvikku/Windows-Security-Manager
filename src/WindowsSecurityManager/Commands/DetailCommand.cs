@@ -37,6 +37,11 @@ public static class DetailCommand
             Console.WriteLine($"  Name:          {setting.Name}");
             Console.WriteLine($"  Description:   {setting.Description}");
             Console.WriteLine($"  Category:      {setting.Category}");
+            Console.WriteLine($"  Impact:        {ImpactFormatter.Format(setting.Impact)}");
+            if (!string.IsNullOrWhiteSpace(setting.Consequences))
+            {
+                Console.WriteLine($"  Consequences:  {setting.Consequences}");
+            }
             Console.WriteLine();
             Console.WriteLine($"  Registry:");
             Console.WriteLine($"    Hive:        {setting.RegistryHive}");
